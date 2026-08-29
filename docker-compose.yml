@@ -35,7 +35,9 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 
   db:
-    image: postgres:18-alpine
+    # Keep Postgres pinned to the existing volume-compatible major until we
+    # implement an explicit pg_upgrade or dump/restore path for Docker users.
+    image: postgres:16-alpine
     container_name: hedge-fund-tracker-db
     restart: unless-stopped
     environment:

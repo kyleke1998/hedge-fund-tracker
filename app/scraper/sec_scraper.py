@@ -270,7 +270,7 @@ def _get_primary_xml_url(report_page_soup, filing_type):
         config = FILING_SPECS.get(filing_type)
         if config is None:
             return None
-        tags = report_page_soup.find_all("a", attrs={"href": re.compile("xml")})
+        tags = report_page_soup.find_all("a", attrs={"href": re.compile("xml", re.IGNORECASE)})
 
         xml_link_index = int(config["xml_link_index"])
         if len(tags) > xml_link_index:

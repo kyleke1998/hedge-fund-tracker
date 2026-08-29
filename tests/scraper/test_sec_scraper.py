@@ -203,6 +203,32 @@ class TestSecScraper(unittest.TestCase):
             "https://www.sec.gov/Archives/edgar/data/123/000/xsl.xml",
         )
 
+    def test_get_primary_xml_url_matches_uppercase_extension(self):
+        """
+        Some filers submit their information table with an uppercase .XML
+        extension (e.g. Viking Global's "MSFS13F033126.XML"). The href regex
+        must match case-insensitively, or that document link is silently
+        dropped and the "13F-HR" (index 3) lookup falls short of the real
+        info-table document, causing _get_primary_xml_url to return None
+        and the filing to look empty/unscrapeable.
+        """
+        html = """
+        <div>Filing Date</div>
+        <div class="info">2026-05-15</div>
+        <div>Period of Report</div>
+        <div class="info">2026-03-31</div>
+        <a href="/Archives/edgar/data/123/000/xslForm13F_X02/primary_doc.xml">primary_doc.xml</a>
+        <a href="/Archives/edgar/data/123/000/primary_doc.xml">primary_doc.xml</a>
+        <a href="/Archives/edgar/data/123/000/xslForm13F_X02/MSFS13F033126.XML">MSFS13F033126.XML</a>
+        <a href="/Archives/edgar/data/123/000/MSFS13F033126.XML">MSFS13F033126.XML</a>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+
+        self.assertEqual(
+            _get_primary_xml_url(soup, "13F-HR"),
+            "https://www.sec.gov/Archives/edgar/data/123/000/MSFS13F033126.XML",
+        )
+
     @patch("app.scraper.sec_scraper._get_request")
     def test_scrape_filing_success(self, mock_get_request):
         """Test _scrape_filing successfully extracts data."""
