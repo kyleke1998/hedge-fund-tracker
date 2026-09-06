@@ -29,13 +29,14 @@ export type {
   SectorHierarchyEntry,
   Stock,
   StockQuarterAnalysis,
+  TickerHoldingsPoint,
 } from "./data/types";
 
 export type { Quarter } from "./quarters";
 
 export { clearCache, downloadFile, saveFileToDisk } from "./data/fetch";
 
-export { formatPct, formatValue, parseValueString } from "./data/format";
+export { formatPct, formatValue, formatValueShort, parseValueString } from "./data/format";
 
 export {
   generateAddFundCSV,
@@ -67,12 +68,14 @@ export {
 } from "./data/quarterData";
 
 export { getPerformance, parsePerformanceRows } from "./data/performance";
+export { getRegime, parseRegimeRows, reindexShareIndex, sectorWindowChange } from "./data/regime";
 
 export { enrichNQFiling, getEnrichedNQFilings, getNonQuarterlyFilings } from "./data/nonQuarterly";
 
 export {
   aggregateStockLevel,
   fetchQuarterAnalysis,
+  getTickerHoldingsHistory,
   mergeNonQuarterlyHoldings,
   runFundAnalysis,
   runQuarterAnalysis,

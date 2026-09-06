@@ -15,6 +15,7 @@ import { ROUTES } from "@/lib/routes";
 // Route-level code splitting: each page ships as its own chunk and loads on navigation.
 const QuarterlyTrends = lazy(() => import("@/pages/QuarterlyTrends"));
 const StrategyPerformance = lazy(() => import("@/pages/StrategyPerformance"));
+const RegimeSignals = lazy(() => import("@/pages/RegimeSignals"));
 const FundPortfolio = lazy(() => import("@/pages/FundPortfolio"));
 const StockAnalysis = lazy(() => import("@/pages/StockAnalysis"));
 const StockBrowser = lazy(() => import("@/pages/StockBrowser"));
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path={ROUTES.latest} element={<Dashboard />} />
                 <Route path={ROUTES.quarterly} element={<QuarterlyTrends />} />
                 <Route path={ROUTES.strategyPerformance} element={<StrategyPerformance />} />
+                <Route path={ROUTES.regime} element={<RegimeSignals />} />
                 <Route path={ROUTES.funds} element={<FundPortfolio />} />
                 <Route path={`${ROUTES.funds}/:fundId`} element={<FundPortfolio />} />
                 <Route path={ROUTES.stocks} element={<StockBrowser />} />

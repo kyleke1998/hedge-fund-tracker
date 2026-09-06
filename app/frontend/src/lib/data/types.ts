@@ -6,6 +6,8 @@
  * camelCase shapes the rest of the app consumes.
  */
 
+import type { Quarter } from "../quarters";
+
 // ---------- Raw CSV row types ----------
 
 export interface RawHedgeFund {
@@ -235,6 +237,16 @@ export interface EnrichedNQFiling extends NonQuarterlyFiling {
   quarterPortfolioPct: number | null;
   /** For NEW positions: weight over the fund's merged portfolio (13F total + this position). */
   estimatedPortfolioPct: number | null;
+}
+
+/** One quarter's institutional footprint in a single ticker, across every tracked fund. */
+export interface TickerHoldingsPoint {
+  quarter: Quarter;
+  /** Quarter-end date the position is reported as of (ISO `YYYY-MM-DD`). */
+  asOf: string;
+  totalShares: number;
+  totalValue: number;
+  holderCount: number;
 }
 
 /** A fund's latest-13F view: per-ticker positions plus the filing's declared total value. */

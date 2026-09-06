@@ -8,6 +8,7 @@ export const ROUTES = {
   latest: "/latest",
   quarterly: "/quarterly",
   strategyPerformance: "/performance",
+  regime: "/regime",
   learn: "/learn",
   funds: "/funds",
   stocks: "/stocks",

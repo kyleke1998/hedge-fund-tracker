@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from curl_cffi import requests
 
@@ -66,13 +66,17 @@ class StockAnalysis(FinanceLibrary):
         """
         Gets the average daily price for a ticker on a specific date.
         The average price is calculated as (High + Low) / 2. If the requested date
-        is not a trading day, the most recent trading day at or before it is used.
+        is not a trading day, the most recent trading day at or before it is used,
+        provided it is within MAX_PRICE_STALENESS_DAYS.
         """
         rows = StockAnalysis._fetch_history(ticker, "5Y", "Daily")
         target = date_obj.isoformat()
+        oldest = (date_obj - timedelta(days=StockAnalysis.MAX_PRICE_STALENESS_DAYS)).isoformat()
 
         for row in rows:
             if row.get("t") and row["t"] <= target:
+                if row["t"] < oldest:
+                    break
                 return round((row["h"] + row["l"]) / 2, 2)
 
         logger.warning("StockAnalysis: No data for %s at or before %s.", log_safe(ticker), date_obj)

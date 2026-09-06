@@ -3,11 +3,13 @@ from datetime import date
 
 import pandas as pd
 
+from app.analysis.smart_scores import score_core
 from app.backtest.engine import (
     Benchmark,
     build_screen,
     min_holders_for_quarter,
     quarter_entry_date,
+    quarter_smart_scores,
     run_backtest,
 )
 from app.backtest.strategies import strategy_by_id
@@ -61,20 +63,26 @@ ANALYSIS = {
     ),
 }
 
+# Derived from the engine rather than restated, so the fixture follows
+# FILING_LAG_DAYS instead of pinning yesterday's entry dates.
+ENTRY_Q1 = quarter_entry_date("2025Q1").isoformat()
+ENTRY_Q2 = quarter_entry_date("2025Q2").isoformat()
+ENTRY_Q3 = quarter_entry_date("2025Q3").isoformat()
+
 PRICES = {
-    ("AAA", "2025-05-15"): 100.0,
-    ("BBB", "2025-05-15"): 50.0,
-    ("SPY", "2025-05-15"): 400.0,
-    ("QQQ", "2025-05-15"): 300.0,
-    ("AAA", "2025-08-14"): 120.0,  # +20%
-    ("BBB", "2025-08-14"): 55.0,  # +10%
-    ("SPY", "2025-08-14"): 420.0,  # +5%
-    ("QQQ", "2025-08-14"): 330.0,  # +10%
-    ("AAA", "2025-11-14"): 132.0,  # +10% over window 2
-    ("DDD", "2025-08-14"): 60.0,
-    ("DDD", "2025-11-14"): 66.0,  # +10%
-    ("SPY", "2025-11-14"): 441.0,  # +5%
-    ("QQQ", "2025-11-14"): 363.0,  # +10%
+    ("AAA", ENTRY_Q1): 100.0,
+    ("BBB", ENTRY_Q1): 50.0,
+    ("SPY", ENTRY_Q1): 400.0,
+    ("QQQ", ENTRY_Q1): 300.0,
+    ("AAA", ENTRY_Q2): 120.0,  # +20%
+    ("BBB", ENTRY_Q2): 55.0,  # +10%
+    ("SPY", ENTRY_Q2): 420.0,  # +5%
+    ("QQQ", ENTRY_Q2): 330.0,  # +10%
+    ("AAA", ENTRY_Q3): 132.0,  # +10% over window 2
+    ("DDD", ENTRY_Q2): 60.0,
+    ("DDD", ENTRY_Q3): 66.0,  # +10%
+    ("SPY", ENTRY_Q3): 441.0,  # +5%
+    ("QQQ", ENTRY_Q3): 363.0,  # +10%
 }
 
 BENCHES = [Benchmark("SPY", "S&P 500"), Benchmark("QQQ", "Nasdaq 100")]
@@ -140,11 +148,13 @@ class TestHelpers(unittest.TestCase):
     Tests for the date + threshold helpers.
     """
 
-    def test_entry_is_quarter_end_plus_45(self):
+    def test_entry_is_the_day_after_the_filing_deadline(self):
         """
-        Entry date is quarter-end plus the filing lag.
+        Entry is quarter-end + 46 days, i.e. the first session *after* the day-45
+        13F deadline. Buying on day 45 itself would transact on a screen that
+        includes filings which may only have been published after that close.
         """
-        self.assertEqual(quarter_entry_date("2025Q1"), date(2025, 5, 15))
+        self.assertEqual(quarter_entry_date("2025Q1"), date(2025, 5, 16))
 
     def test_min_holders_is_ceil_of_ten_percent(self):
         """
@@ -212,3 +222,88 @@ class TestRunBacktest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestQuarterSmartScores(unittest.TestCase):
+    """
+    The smart score the divergence study evaluates has to be the *published*
+    score, which means computing it on the whole quarter's universe. Its three
+    components are percentile ranks, so scoring a filtered subset would silently
+    produce a different number for the same stock in the same quarter.
+    """
+
+    FRAME = pd.DataFrame(
+        [
+            {"Ticker": "AAA", "Holder_Count": 40, "Net_Buyers": 20, "Avg_Portfolio_Pct": 8.0},
+            {"Ticker": "BBB", "Holder_Count": 30, "Net_Buyers": 10, "Avg_Portfolio_Pct": 4.0},
+            {"Ticker": "CCC", "Holder_Count": 20, "Net_Buyers": 0, "Avg_Portfolio_Pct": 2.0},
+            {"Ticker": "DDD", "Holder_Count": 10, "Net_Buyers": -10, "Avg_Portfolio_Pct": 1.0},
+        ]
+    )
+
+    def test_scores_are_returned_per_ticker_in_the_one_to_ten_band(self):
+        scores = quarter_smart_scores("2025Q1", analysis_fn=lambda _: self.FRAME)
+        self.assertEqual(sorted(scores.index), ["AAA", "BBB", "CCC", "DDD"])
+        self.assertTrue(((scores >= 1.0) & (scores <= 10.0)).all())
+
+    def test_ranking_follows_the_institutional_components(self):
+        scores = quarter_smart_scores("2025Q1", analysis_fn=lambda _: self.FRAME)
+        self.assertEqual(scores.idxmax(), "AAA")
+        self.assertEqual(scores.idxmin(), "DDD")
+
+    def test_the_score_reflects_the_full_universe_not_a_subset(self):
+        full = quarter_smart_scores("2025Q1", analysis_fn=lambda _: self.FRAME)
+        subset = quarter_smart_scores(
+            "2025Q1", analysis_fn=lambda _: self.FRAME[self.FRAME["Ticker"].isin(["CCC", "DDD"])]
+        )
+        self.assertNotAlmostEqual(full["CCC"], subset["CCC"])
+
+    def test_an_empty_quarter_produces_an_empty_series(self):
+        empty = quarter_smart_scores("2025Q1", analysis_fn=lambda _: self.FRAME.iloc[0:0])
+        self.assertTrue(empty.empty)
+
+
+class TestQuarterSmartScoresDeduplication(unittest.TestCase):
+    """
+    The stock-level frame groups by ticker *and* company, so one ticker carried
+    under two company spellings ("DoorDash Inc" / "Doordash Inc") splits into two
+    rows that each understate its institutional footprint. The score has to come
+    back one row per ticker, and from the row that actually describes the stock.
+    """
+
+    SPLIT_NAME = pd.DataFrame(
+        [
+            {
+                "Ticker": "DASH",
+                "Company": "DoorDash Inc",
+                "Holder_Count": 1,
+                "Net_Buyers": 1,
+                "Avg_Portfolio_Pct": 0.05,
+            },
+            {
+                "Ticker": "DASH",
+                "Company": "Doordash Inc",
+                "Holder_Count": 15,
+                "Net_Buyers": -4,
+                "Avg_Portfolio_Pct": 1.69,
+            },
+            {
+                "Ticker": "AAA",
+                "Company": "A Co",
+                "Holder_Count": 8,
+                "Net_Buyers": 2,
+                "Avg_Portfolio_Pct": 0.9,
+            },
+        ]
+    )
+
+    def test_a_ticker_split_across_spellings_returns_one_score(self):
+        scores = quarter_smart_scores("2026Q2", analysis_fn=lambda _: self.SPLIT_NAME)
+        self.assertEqual(scores.index.tolist().count("DASH"), 1)
+
+    def test_the_surviving_score_is_the_stronger_of_the_split_rows(self):
+        frame = self.SPLIT_NAME
+        both = score_core(frame)[frame["Ticker"].to_numpy() == "DASH"]
+        scores = quarter_smart_scores("2026Q2", analysis_fn=lambda _: frame)
+        self.assertAlmostEqual(scores["DASH"], float(both.max()))
+        self.assertNotAlmostEqual(scores["DASH"], float(both.min()))

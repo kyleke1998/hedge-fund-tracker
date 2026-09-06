@@ -4,6 +4,7 @@
  */
 
 import { IS_GH_PAGES_MODE } from "../config";
+import { quarterEndDate } from "../quarters";
 import { withSmartScores } from "../smartScore";
 import { cachedFetch } from "./fetch";
 import { formatPct, parseValueString } from "./format";
@@ -16,6 +17,7 @@ import type {
   FundTickerHolding,
   QuarterlyHolding,
   StockQuarterAnalysis,
+  TickerHoldingsPoint,
 } from "./types";
 
 /**
@@ -516,6 +518,42 @@ export async function runStockAnalysis(
 
     onProgress?.("Done", 100);
     return results.sort((a, b) => b.shares - a.shares);
+  });
+}
+
+/**
+ * Builds the quarter-by-quarter institutional footprint in one ticker.
+ *
+ * Reuses `runStockAnalysis` per quarter rather than re-reading the fund CSVs,
+ * so every point matches the holders table on the stock page exactly — the
+ * latest quarter included, where that function merges 13D/G + Form 4 activity
+ * on top of the 13F snapshot. Quarters where no tracked fund held the ticker
+ * are omitted, leaving a gap in the chart instead of a misleading zero.
+ */
+export async function getTickerHoldingsHistory(ticker: string): Promise<TickerHoldingsPoint[]> {
+  return cachedFetch(`ticker_holdings_history_${ticker}`, async () => {
+    const quarters = await getAvailableQuarters();
+    const points: TickerHoldingsPoint[] = [];
+    // Sequential by quarter: runStockAnalysis already fans out 20 fund CSVs at
+    // a time, and running every quarter at once would multiply that past what
+    // the static host tolerates.
+    for (const quarter of quarters) {
+      try {
+        const holdings = await runStockAnalysis(ticker, quarter);
+        const holders = holdings.filter((h) => h.shares > 0);
+        if (holders.length === 0) continue;
+        points.push({
+          quarter,
+          asOf: quarterEndDate(quarter),
+          totalShares: holders.reduce((s, h) => s + h.shares, 0),
+          totalValue: holders.reduce((s, h) => s + h.value, 0),
+          holderCount: holders.length,
+        });
+      } catch {
+        continue;
+      }
+    }
+    return points;
   });
 }
 

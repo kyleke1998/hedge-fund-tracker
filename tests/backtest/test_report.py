@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.backtest.engine import quarter_entry_date
 from app.backtest.report import CSV_FIELDS, rebuild_strategy_performance, write_rows
 
 
@@ -116,15 +117,17 @@ class TestRebuild(unittest.TestCase):
                 ]
             )
         }
+        entry_in = quarter_entry_date("2025Q1").isoformat()
+        entry_out = quarter_entry_date("2025Q2").isoformat()
         prices = {
-            ("AAA", "2025-05-15"): 100.0,
-            ("AAA", "2025-08-14"): 120.0,
-            ("BBB", "2025-05-15"): 50.0,
-            ("BBB", "2025-08-14"): 55.0,
-            ("SPY", "2025-05-15"): 400.0,
-            ("SPY", "2025-08-14"): 420.0,
-            ("QQQ", "2025-05-15"): 300.0,
-            ("QQQ", "2025-08-14"): 330.0,
+            ("AAA", entry_in): 100.0,
+            ("AAA", entry_out): 120.0,
+            ("BBB", entry_in): 50.0,
+            ("BBB", entry_out): 55.0,
+            ("SPY", entry_in): 400.0,
+            ("SPY", entry_out): 420.0,
+            ("QQQ", entry_in): 300.0,
+            ("QQQ", entry_out): 330.0,
         }
 
         rebuild_strategy_performance(

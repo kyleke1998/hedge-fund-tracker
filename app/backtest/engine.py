@@ -21,7 +21,10 @@ from app.utils.strings import get_quarter_date
 
 logger = get_logger(__name__)
 
-FILING_LAG_DAYS = 45  # 13F filing deadline after quarter-end; the entry-date proxy
+# 13F is due 45 days after quarter-end, and most funds file on the deadline itself —
+# often after the close. Entering on day 46 keeps the screen strictly inside what was
+# public before the trade, at the cost of one day of drift.
+FILING_LAG_DAYS = 46
 
 
 @dataclass(frozen=True)
@@ -70,10 +73,35 @@ def min_holders_for_quarter(
 
 def quarter_entry_date(quarter: str) -> date:
     """
-    Return the strategy's entry date for a quarter (quarter-end + filing lag).
+    Return the strategy's entry date for a quarter (quarter-end + filing lag) —
+    the first session after the 13F deadline, so no filing published that day
+    can influence a trade made at that day's price.
     """
     quarter_end = datetime.strptime(get_quarter_date(quarter), "%Y-%m-%d").date()
     return quarter_end + timedelta(days=FILING_LAG_DAYS)
+
+
+def quarter_smart_scores(
+    quarter: str, *, analysis_fn: Callable[[str], pd.DataFrame] | None = None
+) -> pd.Series:
+    """
+    Ticker -> published smart score for a quarter, as known at filing time.
+
+    Computed on the quarter's *whole* point-in-time universe. The score's three
+    components are percentile ranks, so a caller that scores an already-filtered
+    frame would get a different number for the same stock in the same quarter —
+    this is the value the site and the smart-score screen actually show.
+    """
+    df = (analysis_fn or _prepare_quarter_pit)(quarter)
+    if df.empty:
+        return pd.Series(dtype="float64", name="Smart_Score")
+    scores = pd.Series(
+        score_core(df).to_numpy(), index=pd.Index(df["Ticker"], name="Ticker"), name="Smart_Score"
+    )
+    # The frame groups by ticker *and* company, so one ticker carried under two
+    # company spellings splits into rows that each understate its footprint.
+    # Keeping the strongest collapses it back to the row describing the stock.
+    return scores.groupby(level="Ticker").max()
 
 
 def build_screen(

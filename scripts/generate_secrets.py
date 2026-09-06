@@ -184,7 +184,9 @@ def main() -> None:
         if replaced:
             actions.append(f"replaced {len(replaced)} placeholder key(s): {', '.join(replaced)}")
         if missing:
-            actions.append(f"appended {len(missing)} missing key(s): {', '.join(k for k, _ in missing)}")
+            actions.append(
+                f"appended {len(missing)} missing key(s): {', '.join(k for k, _ in missing)}"
+            )
         sys.stderr.write(f"Updated {path}: " + "; ".join(actions) + "\n")
         return
 

@@ -1,5 +1,5 @@
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -170,6 +170,35 @@ class TestTradingViewGetAvgPrice(unittest.TestCase):
         price = TradingView.get_avg_price("AAPL", date(2023, 12, 25))
 
         self.assertIsNone(price)
+
+    @patch("app.stocks.libraries.trading_view.TvDatafeed")
+    def test_returns_none_when_latest_bar_exceeds_max_staleness(self, mock_tv_class):
+        """
+        A halted or delisted ticker whose newest bar predates the requested date
+        by more than the staleness budget resolves to None, not to that stale
+        last-ever quote — otherwise the backtest books a fabricated flat return.
+        """
+        mock_tv_class.return_value.get_hist.return_value = _make_hist_df(date_str="2023-11-01")
+
+        price = TradingView.get_avg_price("AAPL", date(2023, 12, 25))
+
+        self.assertIsNone(price)
+
+    @patch("app.stocks.libraries.trading_view.TvDatafeed")
+    def test_accepts_bar_exactly_at_max_staleness_boundary(self, mock_tv_class):
+        """
+        A gap of exactly MAX_PRICE_STALENESS_DAYS is a normal market closure, so
+        the bar is still used.
+        """
+        target = date(2023, 12, 25)
+        oldest = target - timedelta(days=TradingView.MAX_PRICE_STALENESS_DAYS)
+        mock_tv_class.return_value.get_hist.return_value = _make_hist_df(
+            high=155.0, low=145.0, date_str=oldest.isoformat()
+        )
+
+        price = TradingView.get_avg_price("AAPL", target)
+
+        self.assertEqual(price, 150.0)
 
     @patch("app.stocks.libraries.trading_view.TvDatafeed")
     def test_returns_none_when_no_exchange_returns_data(self, mock_tv_class):

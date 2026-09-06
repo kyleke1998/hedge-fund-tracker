@@ -4,9 +4,9 @@ Tests for scripts.generate_secrets placeholder handling.
 
 from __future__ import annotations
 
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 
 from scripts import generate_secrets
 

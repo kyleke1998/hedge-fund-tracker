@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isQuarter, assertQuarter, parseQuarters } from "../quarters";
+import { isQuarter, assertQuarter, parseQuarters, quarterEndDate } from "../quarters";
 
 describe("isQuarter", () => {
   it("accepts valid quarters", () => {
@@ -37,5 +37,14 @@ describe("parseQuarters", () => {
 
   it("returns empty array for no valid entries", () => {
     expect(parseQuarters(["x", "y"])).toEqual([]);
+  });
+});
+
+describe("quarterEndDate", () => {
+  it("maps each quarter to its calendar end date", () => {
+    expect(quarterEndDate("2025Q1")).toBe("2025-03-31");
+    expect(quarterEndDate("2025Q2")).toBe("2025-06-30");
+    expect(quarterEndDate("2025Q3")).toBe("2025-09-30");
+    expect(quarterEndDate("2025Q4")).toBe("2025-12-31");
   });
 });

@@ -29,9 +29,11 @@ __all__ = [
     "get_quarters_for_fund",
     "load_fund_data",
     "load_fund_holdings",
+    "load_filing_dates",
     "load_hedge_funds",
     "load_non_quarterly_data",
     "load_quarterly_data",
+    "record_filing_date",
     "save_comparison",
     "save_non_quarterly_filings",
 ]
@@ -279,7 +281,64 @@ def load_quarterly_data(quarter: str) -> pd.DataFrame:
     return pd.concat(all_fund_data, ignore_index=True)
 
 
-def save_comparison(comparison_dataframe: pd.DataFrame, date: str, fund_name: str) -> None:
+FILING_DATES_COLUMNS = ["Quarter", "Fund", "Filing_Date"]
+
+
+def load_filing_dates() -> pd.DataFrame:
+    """
+    Loads the (quarter, fund) -> EDGAR publication-date ledger.
+
+    Returns an empty typed frame when the file does not exist yet, so callers
+    can treat a database without the ledger the same as one with no rows.
+    """
+    path = _db._safe_db_join(_db.FILING_DATES_FILE)
+    if not path.exists():
+        return pd.DataFrame(columns=FILING_DATES_COLUMNS)
+    try:
+        return pd.read_csv(path, dtype=str).fillna("")
+    except (OSError, pd.errors.ParserError, pd.errors.EmptyDataError):
+        logger.error("while reading filing dates from '%s'", path, exc_info=True)
+        return pd.DataFrame(columns=FILING_DATES_COLUMNS)
+
+
+def record_filing_date(quarter: str, fund_name: str, filing_date: str) -> None:
+    """
+    Upserts one fund-quarter's EDGAR publication date into the ledger.
+
+    This is what makes an amendment gate possible: a comparison rebuilt from a
+    13F-HR/A published long after the quarter's entry date carries information
+    the strategy could not have traded on. Writes are serialized because
+    regeneration drives this from a thread pool.
+    """
+    from app.utils.pd import atomic_to_csv
+
+    with _db._filing_dates_thread_lock:
+        try:
+            df = load_filing_dates()
+            keep = df[~((df["Quarter"] == quarter) & (df["Fund"] == fund_name))]
+            row = pd.DataFrame(
+                [{"Quarter": quarter, "Fund": fund_name, "Filing_Date": filing_date}]
+            )
+            df = pd.concat([keep, row], ignore_index=True)
+            df = df.sort_values(["Quarter", "Fund"], kind="stable").reset_index(drop=True)
+            atomic_to_csv(
+                df[FILING_DATES_COLUMNS], _db._safe_db_join(_db.FILING_DATES_FILE), index=False
+            )
+        except Exception:
+            logger.error(
+                "An error occurred while recording the filing date for '%s' (%s)",
+                log_safe(fund_name),
+                log_safe(quarter),
+                exc_info=True,
+            )
+
+
+def save_comparison(
+    comparison_dataframe: pd.DataFrame,
+    date: str,
+    fund_name: str,
+    filing_date: str | None = None,
+) -> None:
     """
     Saves a fund's quarterly holdings comparison to a dedicated CSV file.
 
@@ -290,6 +349,8 @@ def save_comparison(comparison_dataframe: pd.DataFrame, date: str, fund_name: st
         comparison_dataframe (pd.DataFrame): The DataFrame containing the fund's holdings.
         date (str or datetime): A date used to determine the correct quarter folder.
         fund_name (str): The name of the fund, used for the filename.
+        filing_date (str | None): EDGAR publication date of the filing behind this
+            comparison. Recorded in the filing-date ledger when supplied.
     """
     try:
         quarter_name = get_quarter(date)
@@ -307,6 +368,10 @@ def save_comparison(comparison_dataframe: pd.DataFrame, date: str, fund_name: st
             log_safe(fund_name),
             exc_info=True,
         )
+        return
+
+    if filing_date:
+        record_filing_date(get_quarter(date), fund_name, filing_date)
 
 
 def save_non_quarterly_filings(schedule_filings: list, filepath: str | None = None) -> None:

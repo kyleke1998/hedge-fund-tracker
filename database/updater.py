@@ -82,6 +82,8 @@ def process_fund(fund_info, offset=0, skip_old=False):
                 return
 
             latest_date = filings[0]["reference_date"]
+            # Captured before the previous-filing search below rebinds `filings`.
+            latest_filing_date = filings[0].get("date")
 
             if skip_old and latest_date < MIN_REFERENCE_DATE:
                 print(
@@ -134,7 +136,9 @@ def process_fund(fund_info, offset=0, skip_old=False):
             xml_to_dataframe_13f(previous_filing["xml_content"]) if previous_filing else None
         )
         dataframe_comparison = generate_comparison(dataframe_latest, dataframe_previous)
-        save_comparison(dataframe_comparison, latest_date, fund_name)
+        save_comparison(
+            dataframe_comparison, latest_date, fund_name, filing_date=latest_filing_date
+        )
     except Exception as e:
         print(f"❌ An unexpected error occurred while processing {fund_name} (CIK = {cik}): {e}")
 

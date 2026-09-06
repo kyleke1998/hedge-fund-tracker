@@ -285,8 +285,11 @@ class TradingView(FinanceLibrary):
             target_date = pd.Timestamp(date_obj)
 
             # Pick the most recent bar at or before the requested date, so non-trading
-            # dates (weekends/holidays) resolve to the last trading day.
-            on_or_before = df[df.index.normalize() <= target_date]
+            # dates (weekends/holidays) resolve to the last trading day. The lower
+            # bound stops a delisted or halted ticker resolving to its last-ever quote.
+            oldest = target_date - pd.Timedelta(days=TradingView.MAX_PRICE_STALENESS_DAYS)
+            normalized = df.index.normalize()
+            on_or_before = df[(normalized <= target_date) & (normalized >= oldest)]
 
             if not on_or_before.empty:
                 last_bar = on_or_before.iloc[-1]

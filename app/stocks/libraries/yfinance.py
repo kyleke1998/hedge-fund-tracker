@@ -24,8 +24,6 @@ class YFinance(FinanceLibrary):
     """
 
     FALLBACK_SUFFIXES = [".TO", ".V"]
-    # Days to look back so a non-trading requested date falls onto the prior trading day.
-    AVG_PRICE_LOOKBACK_DAYS = 7
 
     @staticmethod
     def _sanitize_ticker(ticker: str) -> str:
@@ -164,7 +162,7 @@ class YFinance(FinanceLibrary):
             # the last trading day at or before the requested date. 'end' is exclusive.
             price_data = yf.download(
                 tickers=search_ticker,
-                start=date_obj - timedelta(days=YFinance.AVG_PRICE_LOOKBACK_DAYS),
+                start=date_obj - timedelta(days=YFinance.MAX_PRICE_STALENESS_DAYS),
                 end=date_obj + timedelta(days=1),
                 auto_adjust=False,
                 progress=False,
@@ -353,6 +351,35 @@ class YFinance(FinanceLibrary):
     }
 
     @staticmethod
+    def get_splits(ticker: str) -> list[date]:
+        """
+        Gets the ex-dates of every stock split on record for a ticker.
+
+        Yahoo's OHLC series is split-adjusted at source, so these dates mark
+        when previously fetched historical prices were retroactively rescaled.
+        Degrades to an empty list on failure: a failed check must not abort the
+        caller.
+
+        Args:
+            ticker (str): The stock ticker.
+
+        Returns:
+            list[date]: Split ex-dates, oldest first (empty when none or on failure).
+        """
+        try:
+            splits = yf.Ticker(YFinance._sanitize_ticker(ticker)).splits
+            if splits is None or splits.empty:
+                return []
+            return sorted(
+                idx.date()
+                for idx in pd.to_datetime(splits.index, utc=False, errors="coerce")
+                if idx is not pd.NaT and idx == idx
+            )
+        except Exception:
+            logger.warning("YFinance: failed to get splits for %s", log_safe(ticker), exc_info=True)
+            return []
+
+    @staticmethod
     def get_history(ticker: str, period: str = "5y", **kwargs) -> list[dict] | None:
         """
         Gets OHLC price history for a ticker over the requested period.
@@ -408,6 +435,46 @@ class YFinance(FinanceLibrary):
                 exc_info=True,
             )
             return None
+
+    @staticmethod
+    def get_ohlcv(ticker: str, start: date) -> list[dict]:
+        """
+        Gets daily OHLCV bars for a ticker from a start date onwards.
+
+        Unlike `get_history`, the interval never widens with the span and volume
+        is kept: callers analysing how a position could have been accumulated
+        need every session and the size traded in it.
+
+        Args:
+            ticker (str): The stock ticker.
+            start (date): First session to return.
+
+        Returns:
+            list[dict]: {"date", "open", "high", "low", "close", "volume"} rows,
+                oldest first (empty on failure).
+        """
+        try:
+            history = yf.Ticker(YFinance._sanitize_ticker(ticker)).history(
+                start=start.isoformat(), interval="1d", auto_adjust=False
+            )
+            required = {"Open", "High", "Low", "Close"}
+            if history is None or history.empty or not required.issubset(history.columns):
+                return []
+
+            frame = history.reset_index()
+            frame.columns = [str(c).lower() for c in frame.columns]
+            if "volume" not in frame.columns:
+                frame["volume"] = 0.0
+            frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+            columns = ["date", "open", "high", "low", "close", "volume"]
+            return frame[columns].dropna().to_dict("records")
+        except Exception:
+            logger.error(
+                "Failed to get daily bars for Ticker %s using YFinance",
+                log_safe(ticker),
+                exc_info=True,
+            )
+            return []
 
     @staticmethod
     @retry(

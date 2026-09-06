@@ -1,5 +1,5 @@
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 from app.stocks.libraries.stockanalysis import StockAnalysis
@@ -106,6 +106,33 @@ class TestStockAnalysisGetAvgPrice(unittest.TestCase):
         price = StockAnalysis.get_avg_price("UNKNOWN", date(2025, 5, 15))
 
         self.assertIsNone(price)
+
+    @patch("app.stocks.libraries.stockanalysis.StockAnalysis._fetch_history")
+    def test_returns_none_when_latest_bar_exceeds_max_staleness(self, mock_fetch):
+        """
+        A ticker delisted mid-window must not resolve to its last-ever trade
+        price: the backtest would book that stale quote as the exit price and
+        record a flat return instead of dropping the unpriceable name.
+        """
+        mock_fetch.return_value = [{"t": "2025-05-30", "o": 1, "h": 10.0, "l": 8.0, "c": 9.0}]
+
+        price = StockAnalysis.get_avg_price("DEAD", date(2025, 8, 14))
+
+        self.assertIsNone(price)
+
+    @patch("app.stocks.libraries.stockanalysis.StockAnalysis._fetch_history")
+    def test_accepts_bar_exactly_at_max_staleness_boundary(self, mock_fetch):
+        """
+        A gap of exactly MAX_PRICE_STALENESS_DAYS is still a live quote (long
+        weekends and holiday closures), so the bar is used.
+        """
+        target = date(2025, 5, 15)
+        oldest = target - timedelta(days=StockAnalysis.MAX_PRICE_STALENESS_DAYS)
+        mock_fetch.return_value = [{"t": oldest.isoformat(), "o": 1, "h": 10.0, "l": 8.0, "c": 9.0}]
+
+        price = StockAnalysis.get_avg_price("AAPL", target)
+
+        self.assertEqual(price, 9.0)
 
 
 class TestStockAnalysisGetCurrentPrice(unittest.TestCase):

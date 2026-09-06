@@ -34,12 +34,14 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 _stocks_thread_lock = threading.Lock()
+# Guards the filing-date ledger: regeneration writes it from a thread pool.
+_filing_dates_thread_lock = threading.Lock()
 
 
 DB_FOLDER = "./database"
 # Oldest reporting period tracked by the database; fetch/regeneration tooling
 # skips filings referring to earlier quarters.
-MIN_REFERENCE_DATE = "2025-03-31"
+MIN_REFERENCE_DATE = "2022-03-31"
 HEDGE_FUNDS_FILE = "hedge_funds.csv"
 EXCLUDED_HEDGE_FUNDS_FILE = "excluded_hedge_funds.csv"
 LATEST_SCHEDULE_FILINGS_FILE = "non_quarterly.csv"
@@ -47,6 +49,8 @@ MODELS_FILE = "models.csv"
 SECTOR_HIERARCHY_FILE = "sector_hierarchy.csv"
 STOCKS_FILE = "stocks.csv"
 PERFORMANCE_FILE = "performance.csv"
+REGIME_FILE = "regime.csv"
+FILING_DATES_FILE = "filing_dates.csv"
 
 
 def _get_db_root() -> Path:

@@ -91,5 +91,58 @@ class TestStockHistoryEndpoint(unittest.TestCase):
         self.assertEqual(body["points"], [{"date": "2024-01-01", "close": 1.0}])
 
 
+class TestStockCostBasisEndpoint(unittest.TestCase):
+    """/api/stocks/{ticker}/cost-basis validation + delegation."""
+
+    def test_invalid_ticker_returns_422(self):
+        """A malformed ticker is rejected before any computation."""
+        resp = client.get("/api/stocks/not a ticker/cost-basis")
+        self.assertEqual(resp.status_code, 422)
+
+    @patch("app.analysis.cost_basis.ticker_cost_basis")
+    def test_success_returns_band_points(self, mock_basis):
+        """A valid request returns one camelCased record per quarter."""
+        from app.analysis.cost_basis import CostBasisPoint
+
+        mock_basis.return_value = [
+            CostBasisPoint(
+                quarter="2024Q1",
+                as_of="2024-03-31",
+                shares=100.0,
+                holders=2,
+                low=8.0,
+                mid=10.0,
+                high=12.0,
+                seeded_pct=25.0,
+            )
+        ]
+        resp = client.get("/api/stocks/aaa/cost-basis")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["ticker"], "AAA")
+        self.assertEqual(
+            body["points"],
+            [
+                {
+                    "quarter": "2024Q1",
+                    "asOf": "2024-03-31",
+                    "shares": 100.0,
+                    "holders": 2,
+                    "low": 8.0,
+                    "mid": 10.0,
+                    "high": 12.0,
+                    "seededPct": 25.0,
+                }
+            ],
+        )
+
+    @patch("app.analysis.cost_basis.ticker_cost_basis", side_effect=ValueError("boom"))
+    def test_a_failed_estimate_returns_no_points(self, _mock_basis):
+        """The band is an overlay: a failure leaves the chart without it, not broken."""
+        resp = client.get("/api/stocks/AAA/cost-basis")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["points"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

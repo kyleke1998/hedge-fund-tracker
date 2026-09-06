@@ -137,7 +137,9 @@ def regenerate_fund(fund: dict) -> int:
         df_current = xml_to_dataframe_13f(current["xml_content"])
         df_previous = xml_to_dataframe_13f(previous["xml_content"]) if previous else None
         comparison = generate_comparison(df_current, df_previous)
-        save_comparison(comparison, current["reference_date"], fund_name)
+        save_comparison(
+            comparison, current["reference_date"], fund_name, filing_date=current.get("date")
+        )
         regenerated += 1
     return regenerated
 

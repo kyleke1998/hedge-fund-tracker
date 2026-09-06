@@ -412,3 +412,43 @@ class TestYFinance(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestYFinanceGetSplits(unittest.TestCase):
+    """
+    Split ex-dates back the price cache's invalidation of rows that a later
+    split has retroactively rescaled.
+    """
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_ex_dates_ascending(self, mock_ticker):
+        """
+        Returns each split's ex-date as a plain date, oldest first.
+        """
+        mock_ticker.return_value.splits = pd.Series(
+            [4.0, 2.0],
+            index=pd.to_datetime(["2025-07-01", "2026-03-02"]),
+        )
+
+        splits = YFinance.get_splits("AAPL")
+
+        self.assertEqual(splits, [date(2025, 7, 1), date(2026, 3, 2)])
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_empty_list_when_never_split(self, mock_ticker):
+        """
+        A ticker with no split history returns an empty list.
+        """
+        mock_ticker.return_value.splits = pd.Series(dtype=float)
+
+        self.assertEqual(YFinance.get_splits("AAPL"), [])
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_empty_list_on_failure(self, mock_ticker):
+        """
+        A network or parsing failure degrades to "no known splits" rather than
+        propagating — a failed check must not abort a backtest run.
+        """
+        mock_ticker.side_effect = Exception("Network error")
+
+        self.assertEqual(YFinance.get_splits("AAPL"), [])

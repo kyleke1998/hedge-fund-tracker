@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, LineChart as LineChartIcon, Info } from "lucide-react";
+import { Loader2, LineChart as LineChartIcon, Info, AlertTriangle } from "lucide-react";
 import EquityCurveChart from "@/components/EquityCurveChart";
 import CompositionPanel from "@/components/CompositionPanel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -123,14 +123,44 @@ export default function StrategyPerformance() {
   return (
     <div className="space-y-6 max-w-screen-2xl">
       <div>
-        <span className="eyebrow">Backtested track record</span>
+        <span className="eyebrow">Descriptive backtest</span>
         <h1 className="page-title mt-1.5">
           <LineChartIcon className="page-title-icon" /> Strategy Performance
         </h1>
         <p className="text-sm text-muted-foreground mt-1.5">
           How each consensus screen would have performed — rebalanced every quarter and held to the
-          next — against the S&amp;P 500.
+          next — against the S&amp;P 500. Read it as a description of the past, not a forecast: the
+          caveats below are large enough to explain the whole gap.
         </p>
+      </div>
+
+      <div className="rounded-lg border border-warning/20 bg-warning/5 p-4 flex gap-3 items-start">
+        <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-semibold text-warning">What this number is not</p>
+          <ul className="text-muted-foreground mt-1.5 space-y-1.5 list-disc pl-4">
+            <li>
+              <span className="font-medium text-foreground">
+                The fund list is chosen with hindsight.
+              </span>{" "}
+              Screens for past quarters are rebuilt from the funds tracked <em>today</em>, and that
+              roster is curated on realised returns — underperformers get dropped, strong performers
+              added and backfilled. Every historical quarter is therefore a consensus of funds
+              already known to have done well.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">One regime, no down quarter.</span> The
+              sample is a handful of consecutive rising quarters. A high-beta basket of mid-cap
+              institutional names beats a cap-weighted index in that environment almost by
+              construction — which is why even the deliberately contrarian Decreasing screen does.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">No costs, no dividends.</span> Price
+              returns only, on both sides. Several screens turn over most of the book each quarter;
+              that friction is not deducted.
+            </li>
+          </ul>
+        </div>
       </div>
 
       {isLoading ? (
@@ -221,10 +251,11 @@ export default function StrategyPerformance() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[300px] text-xs font-normal leading-relaxed">
-                  Entered on each quarter's 13F filing date (quarter-end + 45 days — the first day
-                  the holdings are public; entering earlier would be look-ahead bias), held to the
-                  next filing, then rebalanced. Conviction-weighted by average portfolio weight, vs
-                  the S&amp;P 500. Only fully-elapsed quarters are shown, so the sample is small.
+                  Entered the day after each quarter's 13F deadline (quarter-end + 46 days — most
+                  funds file on the deadline itself, often after the close, so trading that day
+                  would be look-ahead bias), held to the next entry, then rebalanced.
+                  Conviction-weighted by average portfolio weight, vs the S&amp;P 500. Only
+                  fully-elapsed quarters are shown, so the sample is small.
                 </TooltipContent>
               </Tooltip>
             </p>

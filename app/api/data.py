@@ -1,7 +1,7 @@
 """
 Read/browse endpoints the frontend uses to fetch CSV-backed data: raw database
-file serving, quarter discovery, the per-quarter aggregated analysis, and stock
-price history.
+file serving, quarter discovery, the per-quarter aggregated analysis, stock
+price history and the estimated institutional cost-basis band.
 
 Named `data` (not `database`) to avoid confusion with the `app.database`
 data-access package this router reads through.
@@ -12,10 +12,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.concurrency import run_in_threadpool
 
-from app.api.common import _df_to_json_safe_records, _require_quarter
+from app.api.common import _df_to_json_safe_records, _require_quarter, _require_ticker
 from app.api.paths import DATABASE_DIR, _safe_db_path
 from app.auth.dependencies import require_local_or_superuser
 from app.patterns import QUARTER_RE
+from app.utils.logger import get_logger, log_safe
+
+logger = get_logger(__name__)
 
 router = APIRouter(tags=["data"])
 
@@ -185,3 +188,46 @@ def stock_price_history(ticker: str, range: str = "5y") -> dict[str, object]:
 
     points = PriceFetcher.get_history(sanitized, range)
     return {"ticker": sanitized, "range": range, "points": points}
+
+
+@router.get("/api/stocks/{ticker}/cost-basis")
+def stock_cost_basis(ticker: str) -> dict[str, object]:
+    """Return the estimated institutional cost-basis band for a ticker.
+
+    Args:
+        ticker: Stock ticker (validated/normalised to upper case).
+
+    Returns:
+        ``{"ticker", "points": [{"quarter", "asOf", "shares", "holders",
+        "low", "mid", "high", "seededPct"}, ...]}`` — one point per quarter with
+        at least one tracked holder, oldest first. The band is a chart overlay,
+        so a ticker we cannot price yields no points rather than an error.
+
+    Raises:
+        HTTPException: 422 on an invalid ticker.
+    """
+    from app.analysis import cost_basis
+
+    sanitized = _require_ticker(ticker)
+    try:
+        points = cost_basis.ticker_cost_basis(sanitized)
+    except Exception:
+        logger.error("Failed to estimate the cost basis for %s", log_safe(sanitized), exc_info=True)
+        points = []
+
+    return {
+        "ticker": sanitized,
+        "points": [
+            {
+                "quarter": p.quarter,
+                "asOf": p.as_of,
+                "shares": p.shares,
+                "holders": p.holders,
+                "low": p.low,
+                "mid": p.mid,
+                "high": p.high,
+                "seededPct": p.seeded_pct,
+            }
+            for p in points
+        ],
+    }

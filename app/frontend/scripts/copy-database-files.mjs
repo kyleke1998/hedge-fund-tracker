@@ -14,4 +14,5 @@ export const staticFiles = [
   "models.csv",
   "sector_hierarchy.csv",
   "performance.csv",
+  "regime.csv",
 ];

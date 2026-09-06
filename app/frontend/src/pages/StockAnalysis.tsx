@@ -10,6 +10,7 @@ import {
   formatValue,
   formatPct,
   getStocks,
+  getTickerHoldingsHistory,
   type FundTickerHolding,
 } from "@/lib/dataService";
 import type { SmartScoreView } from "@/lib/smartScore";
@@ -115,6 +116,15 @@ export default function StockAnalysis() {
     enabled: !!quarter,
     staleTime: 10 * 60 * 1000,
   });
+  // Quarter-by-quarter institutional footprint for the price-chart overlay.
+  // Independent of the quarter dropdown (it spans every quarter on record) and
+  // deliberately not gating the page: the chart renders as soon as prices land.
+  const { data: holdingsHistory = [] } = useQuery({
+    queryKey: ["tickerHoldingsHistory", ticker],
+    queryFn: () => getTickerHoldingsHistory(ticker),
+    staleTime: 10 * 60 * 1000,
+  });
+
   const scoreRow = quarterRows.find((r) => r.ticker === ticker);
   const smartScore: SmartScoreView | undefined =
     scoreRow?.smartScore !== undefined
@@ -412,7 +422,7 @@ export default function StockAnalysis() {
           </div>
 
           {/* Price history chart */}
-          <StockPriceChart ticker={ticker} />
+          <StockPriceChart ticker={ticker} holdings={holdingsHistory} />
 
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

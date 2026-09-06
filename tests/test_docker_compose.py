@@ -2,9 +2,9 @@
 Regression tests for docker-compose runtime compatibility.
 """
 
-from pathlib import Path
 import re
 import unittest
+from pathlib import Path
 
 
 class TestDockerCompose(unittest.TestCase):
@@ -19,7 +19,9 @@ class TestDockerCompose(unittest.TestCase):
         migration plan instead of an automatic dependency update.
         """
         compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
-        image_match = re.search(r"^\s*image:\s*postgres:(\d+)-alpine\s*$", compose_text, re.MULTILINE)
+        image_match = re.search(
+            r"^\s*image:\s*postgres:(\d+)-alpine\s*$", compose_text, re.MULTILINE
+        )
         self.assertIsNotNone(image_match, "Expected a postgres alpine image in docker-compose.yml")
         self.assertEqual(
             int(image_match.group(1)),

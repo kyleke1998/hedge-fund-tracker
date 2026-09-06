@@ -15,6 +15,13 @@ class FinanceLibrary(ABC):
     without runtime hasattr checks.
     """
 
+    # How far back `get_avg_price` may reach for the last bar at or before the
+    # requested date. Long weekends and holiday closures need a few days of
+    # slack, but an unbounded reach silently resolves a delisted or halted
+    # ticker to its last-ever quote — which the backtest would then book as a
+    # real exit price and record a fabricated flat return.
+    MAX_PRICE_STALENESS_DAYS = 7
+
     @staticmethod
     @abstractmethod
     def get_ticker(cusip: str, **kwargs) -> str | None:

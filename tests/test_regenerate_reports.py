@@ -1,10 +1,23 @@
 import unittest
+from datetime import date, timedelta
 
 from scripts.regenerate_reports import (
+    FETCH_FLOOR,
     build_comparison_pairs,
     collect_filings_until_floor,
     dedupe_filings_by_period,
 )
+
+
+def _from_floor(days: int) -> str:
+    """
+    Builds a publication date the given number of days from the fetch floor.
+
+    The floor moves whenever MIN_REFERENCE_DATE does, so fixtures that pin the
+    walk's stop condition express dates relative to it rather than to a literal
+    year that a later backfill would silently invalidate.
+    """
+    return (date.fromisoformat(FETCH_FLOOR) + timedelta(days=days)).isoformat()
 
 
 def _filing(reference_date: str, label: str = "", published: str | None = None) -> dict:
@@ -29,12 +42,12 @@ class TestCollectFilingsUntilFloor(unittest.TestCase):
         """
         listing = iter(
             [
-                _filing("2025-06-30", "q2", published="2025-07-29"),
-                _filing("2024-09-30", "old", published="2025-05-12"),
-                _filing("2024-06-30", "old", published="2025-05-12"),
-                _filing("2024-03-31", "old", published="2025-05-12"),
-                _filing("2025-03-31", "q1", published="2025-05-09"),
-                _filing("2024-12-31", "q4", published="2025-02-12"),
+                _filing("2025-06-30", "q2", published=_from_floor(400)),
+                _filing("2024-09-30", "old", published=_from_floor(300)),
+                _filing("2024-06-30", "old", published=_from_floor(300)),
+                _filing("2024-03-31", "old", published=_from_floor(300)),
+                _filing("2025-03-31", "q1", published=_from_floor(200)),
+                _filing("2024-12-31", "q4", published=_from_floor(100)),
             ]
         )
 
@@ -53,9 +66,9 @@ class TestCollectFilingsUntilFloor(unittest.TestCase):
 
         def listing():
             for filing in [
-                _filing("2025-03-31", "q1", published="2025-05-09"),
-                _filing("2024-09-30", "pre-floor", published="2024-11-12"),
-                _filing("2024-06-30", "beyond", published="2024-08-12"),
+                _filing("2025-03-31", "q1", published=_from_floor(100)),
+                _filing("2024-09-30", "pre-floor", published=_from_floor(-1)),
+                _filing("2024-06-30", "beyond", published=_from_floor(-100)),
             ]:
                 consumed.append(filing["label"])
                 yield filing
