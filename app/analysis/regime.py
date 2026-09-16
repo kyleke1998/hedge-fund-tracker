@@ -43,6 +43,78 @@ MEGA_CAP_BASKET = ("MSFT", "AMZN", "NVDA", "META", "GOOGL", "AAPL", "TSLA", "AMD
 
 UNCLASSIFIED = "Unclassified"
 
+# A few broad Yahoo sectors trade as several unrelated themes at once - a fund
+# rotating from software into semiconductors, or from big-cap pharma into
+# biotech, is invisible at the "Technology" or "Healthcare" level. The regime
+# chart rolls those industries up to named subsectors instead. Every industry
+# not listed here keeps its parent sector label.
+SUBSECTOR_BY_INDUSTRY = {
+    # Technology
+    "Semiconductors": "Semiconductors",
+    "Semiconductor Equipment & Materials": "Semiconductors",
+    "Software - Application": "Software",
+    "Software - Infrastructure": "Software",
+    "Information Technology Services": "IT Services",
+    "Communication Equipment": "Tech Hardware",
+    "Computer Hardware": "Tech Hardware",
+    "Consumer Electronics": "Tech Hardware",
+    "Electronic Components": "Tech Hardware",
+    "Electronics & Computer Distribution": "Tech Hardware",
+    "Scientific & Technical Instruments": "Tech Hardware",
+    "Solar": "Tech Hardware",
+    # Healthcare
+    "Biotechnology": "Biotech",
+    "Drug Manufacturers - General": "Pharmaceuticals",
+    "Drug Manufacturers - Specialty & Generic": "Pharmaceuticals",
+    "Medical Devices": "Medical Devices",
+    "Medical Instruments & Supplies": "Medical Devices",
+    "Diagnostics & Research": "Medical Devices",
+    "Health Information Services": "Healthcare Services",
+    "Healthcare Plans": "Healthcare Services",
+    "Medical Care Facilities": "Healthcare Services",
+    "Medical Distribution": "Healthcare Services",
+    "Pharmaceutical Retailers": "Healthcare Services",
+    # Communication Services
+    "Internet Content & Information": "Interactive Media",
+    "Advertising Agencies": "Media & Entertainment",
+    "Broadcasting": "Media & Entertainment",
+    "Electronic Gaming & Multimedia": "Media & Entertainment",
+    "Entertainment": "Media & Entertainment",
+    "Publishing": "Media & Entertainment",
+    "Telecom Services": "Telecom",
+    # Consumer Cyclical
+    "Internet Retail": "Internet Retail",
+    "Auto & Truck Dealerships": "Automotive",
+    "Auto Manufacturers": "Automotive",
+    "Auto Parts": "Automotive",
+    # Financial Services
+    "Banks - Diversified": "Banks",
+    "Banks - Regional": "Banks",
+    "Asset Management": "Capital Markets",
+    "Capital Markets": "Capital Markets",
+    "Financial Data & Stock Exchanges": "Capital Markets",
+    "Insurance - Diversified": "Insurance",
+    "Insurance - Life": "Insurance",
+    "Insurance - Property & Casualty": "Insurance",
+    "Insurance - Reinsurance": "Insurance",
+    "Insurance - Specialty": "Insurance",
+    "Insurance Brokers": "Insurance",
+    # Industrials
+    "Aerospace & Defense": "Aerospace & Defense",
+}
+
+
+def regime_group(industry: str, sector: str) -> str:
+    """
+    The subsector bucket an industry rolls up to on the regime chart.
+
+    A few broad Yahoo sectors trade as several distinct themes, so their
+    industries map to named subsectors (Semiconductors, Software, Biotech, and
+    so on). Every other industry keeps its parent sector label.
+    """
+    return SUBSECTOR_BY_INDUSTRY.get(industry, sector)
+
+
 # Plausible split factors, plus their reciprocals for reverse splits.
 _FACTORS = np.array([2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30, 40, 50], dtype=float)
 _CANDIDATES = np.concatenate([_FACTORS, 1 / _FACTORS])
@@ -419,7 +491,8 @@ def load_panel(quarter: str, sectors: dict[str, str]) -> pd.DataFrame:
 
 def _sector_map() -> dict[str, str]:
     """
-    CUSIP to sector, resolved through stocks.csv industries and the hierarchy.
+    CUSIP to regime group, resolved through stocks.csv industries and the
+    hierarchy, then rolled up to a named subsector where one applies.
     """
     stocks = load_stocks()
     if stocks.empty:
@@ -428,7 +501,7 @@ def _sector_map() -> dict[str, str]:
     industry_to_sector = dict(zip(hierarchy["Industry"], hierarchy["Sector"], strict=False))
     # load_stocks() indexes by CUSIP rather than carrying it as a column.
     return {
-        str(cusip): industry_to_sector[industry]
+        str(cusip): regime_group(industry, industry_to_sector[industry])
         for cusip, industry in zip(stocks.index, stocks["Industry"], strict=False)
         if industry in industry_to_sector
     }

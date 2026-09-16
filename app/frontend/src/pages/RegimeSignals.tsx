@@ -7,6 +7,7 @@ import {
   Cell,
   Line,
   LineChart,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
@@ -26,6 +27,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  correlationTicks,
+  getCorrelation,
+  yearTicks,
+  type CorrelationPoint,
+} from "@/lib/data/correlation";
+import {
+  getMomentum,
+  rocTicks,
+  yearTicks as momentumYearTicks,
+  type MomentumPoint,
+} from "@/lib/data/momentum";
 import { getRegime, reindexShareIndex, sectorWindowChange } from "@/lib/data/regime";
 
 const RISK_OFF = "hsl(14, 62%, 43%)";
@@ -191,10 +204,207 @@ function DialChart({
   );
 }
 
+/** UTC throughout: the readings are dated by session, not by the reader's clock. */
+const sessionLabel = (t: number) =>
+  new Date(t).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+function CorrelationTooltip({ active, payload }: TooltipContentProps) {
+  const point = active ? (payload?.[0]?.payload as CorrelationPoint | undefined) : undefined;
+  if (!point) return null;
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-lg">
+      <div className="mb-1 text-muted-foreground">{sessionLabel(point.t)}</div>
+      <div className="font-mono font-semibold" style={{ color: NEUTRAL }}>
+        {point.correlation.toFixed(2)}
+      </div>
+      <div className="mt-0.5 text-muted-foreground">{point.stocks} names</div>
+    </div>
+  );
+}
+
+/**
+ * The market backdrop the fund dials operate in: how uniformly the QQQ basket
+ * moved over the past three months. A single series, so the title carries the
+ * identity and the only direct label is on the latest reading.
+ */
+function CorrelationPanel({ points }: { points: CorrelationPoint[] }) {
+  const ticks = correlationTicks(points);
+  const years = yearTicks(points);
+  const latest = points[points.length - 1];
+  return (
+    <Panel
+      title="Realized average stock correlation"
+      caption={`QQQ basket, three-month rolling window of daily returns — ${latest.correlation.toFixed(2)} on ${sessionLabel(latest.t)}.`}
+      info="The mean correlation across every pair of Nasdaq-100 names over the trailing 63 sessions, weighted equally over pairs rather than by market cap. High readings mean the index trades as one block and picking names earns little; low readings mean names move on their own news. The basket is a fixed membership snapshot, so the line measures behaviour rather than index reshuffling, and each reading uses only the names with a complete window."
+    >
+      <ResponsiveContainer width="100%" height={320}>
+        <LineChart data={points} margin={{ top: 8, right: 40, bottom: 0, left: -14 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <XAxis
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            ticks={years}
+            tickFormatter={(t: number) => String(new Date(t).getUTCFullYear())}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={12}
+          />
+          <YAxis
+            domain={[ticks[0], ticks[ticks.length - 1]]}
+            ticks={ticks}
+            tickFormatter={(value: number) => value.toFixed(1)}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+            tickLine={false}
+            axisLine={false}
+            width={46}
+          />
+          <RechartsTooltip content={CorrelationTooltip} />
+          <Line
+            type="linear"
+            dataKey="correlation"
+            name="Average correlation"
+            stroke={NEUTRAL}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+            isAnimationActive={false}
+          />
+          <ReferenceDot
+            x={latest.t}
+            y={latest.correlation}
+            r={3.5}
+            fill={NEUTRAL}
+            stroke="none"
+            label={{
+              value: latest.correlation.toFixed(2),
+              position: "right",
+              fontSize: 12,
+              fontWeight: 600,
+              fill: "hsl(var(--foreground))",
+            }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </Panel>
+  );
+}
+
+const signedPct = (value: number) => `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(1)}%`;
+
+function MomentumTooltip({ active, payload }: TooltipContentProps) {
+  const point = active ? (payload?.[0]?.payload as MomentumPoint | undefined) : undefined;
+  if (!point) return null;
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-lg">
+      <div className="mb-1 text-muted-foreground">{sessionLabel(point.t)}</div>
+      <div
+        className="font-mono font-semibold"
+        style={{ color: point.roc >= 0 ? RISK_ON : RISK_OFF }}
+      >
+        {signedPct(point.roc)}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The market's own trend behind the fund dials: SPY's percent change over the
+ * trailing three months. Above the dashed zero line the index is higher than it
+ * was a quarter ago; below it the tape is against the book.
+ */
+function MomentumPanel({ points }: { points: MomentumPoint[] }) {
+  const ticks = rocTicks(points);
+  const years = momentumYearTicks(points);
+  const latest = points[points.length - 1];
+  return (
+    <Panel
+      title="S&P 500 three-month rate of change"
+      caption={`SPY, percent change over the trailing 63 sessions — ${signedPct(latest.roc)} on ${sessionLabel(latest.t)}.`}
+      info="SPY's price now versus its price about one quarter (63 trading sessions) ago, the standard 3-month rate of change. Prices are put on today's split basis before the change is taken, so a split in the window never reads as a crash or a spike. This is the market backdrop the fund dials above were recorded against, not a tracked-fund signal."
+    >
+      <ResponsiveContainer width="100%" height={320}>
+        <LineChart data={points} margin={{ top: 8, right: 52, bottom: 0, left: -14 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <XAxis
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            ticks={years}
+            tickFormatter={(t: number) => String(new Date(t).getUTCFullYear())}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={12}
+          />
+          <YAxis
+            domain={[ticks[0], ticks[ticks.length - 1]]}
+            ticks={ticks}
+            tickFormatter={(value: number) => (value > 0 ? `+${value}` : String(value))}
+            allowDecimals={false}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+            tickLine={false}
+            axisLine={false}
+            width={46}
+          />
+          <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
+          <RechartsTooltip content={MomentumTooltip} />
+          <Line
+            type="linear"
+            dataKey="roc"
+            name="3-month rate of change"
+            stroke={NEUTRAL}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+            isAnimationActive={false}
+          />
+          <ReferenceDot
+            x={latest.t}
+            y={latest.roc}
+            r={3.5}
+            fill={latest.roc >= 0 ? RISK_ON : RISK_OFF}
+            stroke="none"
+            label={{
+              value: signedPct(latest.roc),
+              position: "right",
+              fontSize: 12,
+              fontWeight: 600,
+              fill: "hsl(var(--foreground))",
+            }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </Panel>
+  );
+}
+
 export default function RegimeSignals() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["regime"],
     queryFn: getRegime,
+  });
+
+  // Independent of the regime CSV: an ungenerated correlation series hides its
+  // panel rather than emptying the page.
+  const { data: correlation } = useQuery({
+    queryKey: ["correlation"],
+    queryFn: getCorrelation,
+  });
+
+  // Same treatment: an ungenerated momentum series hides its panel rather than
+  // emptying the page.
+  const { data: momentum } = useQuery({
+    queryKey: ["momentum"],
+    queryFn: getMomentum,
   });
 
   const [base, setBase] = useState<string | null>(null);
@@ -291,6 +501,10 @@ export default function RegimeSignals() {
         </Panel>
       </div>
 
+      {correlation && correlation.length > 0 && <CorrelationPanel points={correlation} />}
+
+      {momentum && momentum.length > 0 && <MomentumPanel points={momentum} />}
+
       <Panel
         title="Mega-cap exposure: weight versus shares held"
         caption={`MSFT, AMZN, NVDA, META, GOOGL, AAPL, TSLA, AMD — both indexed to ${quarterLabel(baseQuarter)} = 100.`}
@@ -361,9 +575,9 @@ export default function RegimeSignals() {
       </Panel>
 
       <Panel
-        title="Sector weight change"
+        title="Sector & subsector weight change"
         caption={`Percentage points of classified portfolio value, ${quarterLabel(fromQuarter)} → ${quarterLabel(toQuarter)}.`}
-        info="Levels are shares of each quarter's own classified value, so a change over a long window partly reflects a growing tracked universe as well as rotation. Unclassified value is excluded, never bucketed."
+        info="Levels are shares of each quarter's own classified value, so a change over a long window partly reflects a growing tracked universe as well as rotation. The broad multi-theme sectors are split into named subsectors — Technology into Semiconductors, Software, Tech Hardware and IT Services; Healthcare into Biotech, Pharmaceuticals, Medical Devices and Healthcare Services; Communication Services into Interactive Media, Media & Entertainment and Telecom — plus Internet Retail, Automotive, Banks, Insurance, Capital Markets and Aerospace & Defense. Unclassified value is excluded, never bucketed."
         action={
           <div className="flex items-center gap-2">
             <QuarterPicker

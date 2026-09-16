@@ -41,15 +41,78 @@ class Benchmark:
 BENCHMARKS: list[Benchmark] = [Benchmark("SPY", "S&P 500")]
 
 
-def _prepare_quarter_pit(quarter: str) -> pd.DataFrame:
+def _constant_count(n: int) -> Callable[[str], int]:
+    """
+    A fund-count callable that always answers `n`, whatever the quarter.
+    """
+
+    def count(_quarter: str) -> int:
+        return n
+
+    return count
+
+
+def published_funds(
+    quarter: str,
+    as_of: date,
+    *,
+    filing_dates_fn: Callable[[], pd.DataFrame] | None = None,
+) -> set[str] | None:
+    """
+    Funds whose 13F for `quarter` was on EDGAR by `as_of`.
+
+    Returns None when the ledger cannot answer for this quarter — no file, or no
+    rows for it — so a database without filing dates behaves exactly as before
+    rather than screening every fund out. A row whose date will not parse counts
+    as unpublished: an unreadable date is not evidence the filing was public.
+    """
+    from app.database import load_filing_dates
+
+    frame = (filing_dates_fn or load_filing_dates)()
+    if frame.empty:
+        return None
+    rows = frame[frame["Quarter"] == quarter]
+    if rows.empty:
+        return None
+    filed = pd.to_datetime(rows["Filing_Date"], errors="coerce")
+    return set(rows.loc[filed.notna() & (filed <= pd.Timestamp(as_of)), "Fund"])
+
+
+def gate_to_published(
+    df: pd.DataFrame,
+    quarter: str,
+    as_of: date | None,
+    *,
+    filing_dates_fn: Callable[[], pd.DataFrame] | None = None,
+) -> pd.DataFrame:
+    """
+    Drop holdings rows from funds that had not filed for `quarter` by `as_of`.
+
+    A fixed filing lag is not point-in-time: the 45-day deadline slides to the
+    next business day, and funds file late or in catch-up batches months
+    afterwards. For 2025Q4 the deadline landed on the Presidents' Day weekend,
+    so nearly half the tracked funds were still unpublished on the entry date a
+    fixed lag assumes they had met. Passing `as_of` as None leaves the frame
+    untouched, which is what the non-backtest callers want.
+    """
+    if as_of is None:
+        return df
+    allowed = published_funds(quarter, as_of, filing_dates_fn=filing_dates_fn)
+    if allowed is None:
+        return df
+    return df[df["Fund"].isin(allowed)].copy()
+
+
+def _prepare_quarter_pit(quarter: str, as_of: date | None = None) -> pd.DataFrame:
     """
     Build the point-in-time stock-level analysis frame for a quarter.
 
     Mirrors the production aggregation but deliberately omits the non-quarterly
     (13D/G, Form 4) merge that ``get_quarter_data`` applies to the latest quarter
-    — a backtest must only see data known at filing time.
+    — a backtest must only see data known at filing time. With `as_of` set, funds
+    that had not yet filed for the quarter are dropped as well.
     """
-    df = load_quarterly_data(quarter)
+    df = gate_to_published(load_quarterly_data(quarter), quarter, as_of)
     df["Delta_Value_Num"] = get_numeric_series(df["Delta_Value"])
     df["Value_Num"] = get_numeric_series(df["Value"])
     df["Portfolio_Pct"] = get_percentage_number_series(df["Portfolio%"])
@@ -111,15 +174,17 @@ def build_screen(
     threshold: int,
     analysis_fn: Callable[[str], pd.DataFrame] | None = None,
     top_n: int = DEFAULT_TOP_N,
+    as_of: date | None = None,
 ) -> dict[str, float]:
     """
     Reconstruct a strategy's screen for a quarter as ticker -> weight.
 
     Selection follows the strategy spec; weights are each name's
     ``Avg_Portfolio_Pct`` normalized to sum 1.0. Returns an empty dict when no
-    stock qualifies.
+    stock qualifies. `as_of` gates the universe to filings already public on
+    that date; it is ignored when `analysis_fn` supplies the frame.
     """
-    df = (analysis_fn or _prepare_quarter_pit)(quarter)
+    df = analysis_fn(quarter) if analysis_fn else _prepare_quarter_pit(quarter, as_of=as_of)
     if spec.sort_column == "Smart_Score" and "Smart_Score" not in df.columns:
         # Derived lazily from the frame itself (works for injected frames too).
         df = df.assign(Smart_Score=score_core(df))
@@ -229,12 +294,25 @@ def run_backtest(
             )
 
         anchor_ret = bench_ret.get(anchor) if anchor else None
+        # The holder threshold has to count the funds the screen can actually see,
+        # or a quarter where many funds have yet to file sets a bar its own
+        # shrunken universe cannot clear.
+        visible = fund_count_fn
+        if visible is None:
+            published = published_funds(quarter_in, entry)
+            if published is not None:
+                visible = _constant_count(len(published))
         for spec in strategies:
             threshold = min_holders_for_quarter(
-                quarter_in, divisor=spec.min_holders_divisor, fund_count_fn=fund_count_fn
+                quarter_in, divisor=spec.min_holders_divisor, fund_count_fn=visible
             )
             screen = build_screen(
-                quarter_in, spec, threshold=threshold, analysis_fn=analysis_fn, top_n=top_n
+                quarter_in,
+                spec,
+                threshold=threshold,
+                analysis_fn=analysis_fn,
+                top_n=top_n,
+                as_of=entry,
             )
             window = _window_return(screen, entry, exit_date, price, spec.strategy_id)
             if window is None:

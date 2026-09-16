@@ -50,6 +50,8 @@ SECTOR_HIERARCHY_FILE = "sector_hierarchy.csv"
 STOCKS_FILE = "stocks.csv"
 PERFORMANCE_FILE = "performance.csv"
 REGIME_FILE = "regime.csv"
+CORRELATION_FILE = "correlation.csv"
+MOMENTUM_FILE = "momentum.csv"
 FILING_DATES_FILE = "filing_dates.csv"
 
 

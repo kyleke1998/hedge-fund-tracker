@@ -7,7 +7,9 @@ from app.analysis.smart_scores import score_core
 from app.backtest.engine import (
     Benchmark,
     build_screen,
+    gate_to_published,
     min_holders_for_quarter,
+    published_funds,
     quarter_entry_date,
     quarter_smart_scores,
     run_backtest,
@@ -307,3 +309,84 @@ class TestQuarterSmartScoresDeduplication(unittest.TestCase):
         scores = quarter_smart_scores("2026Q2", analysis_fn=lambda _: frame)
         self.assertAlmostEqual(scores["DASH"], float(both.max()))
         self.assertNotAlmostEqual(scores["DASH"], float(both.min()))
+
+
+FILINGS = pd.DataFrame(
+    [
+        {"Quarter": "2025Q1", "Fund": "Prompt", "Filing_Date": "2025-05-10"},
+        {"Quarter": "2025Q1", "Fund": "Late", "Filing_Date": "2025-08-20"},
+        {"Quarter": "2025Q1", "Fund": "Amended", "Filing_Date": "2026-03-02"},
+    ]
+)
+
+QUARTER_ROWS = pd.DataFrame(
+    [
+        {"Fund": "Prompt", "CUSIP": "111", "Value": "$100"},
+        {"Fund": "Late", "CUSIP": "222", "Value": "$200"},
+        {"Fund": "Amended", "CUSIP": "333", "Value": "$300"},
+    ]
+)
+
+
+class PublishedFundsTests(unittest.TestCase):
+    """
+    Only filings already on EDGAR may enter a quarter's point-in-time screen.
+    """
+
+    def test_a_fund_that_had_not_filed_yet_is_excluded(self):
+        funds = published_funds("2025Q1", date(2025, 5, 16), filing_dates_fn=lambda: FILINGS)
+        self.assertEqual(funds, {"Prompt"})
+
+    def test_a_fund_is_included_on_its_own_filing_date(self):
+        funds = published_funds("2025Q1", date(2025, 5, 10), filing_dates_fn=lambda: FILINGS)
+        self.assertEqual(funds, {"Prompt"})
+
+    def test_a_later_as_of_sees_the_late_filer(self):
+        funds = published_funds("2025Q1", date(2025, 9, 1), filing_dates_fn=lambda: FILINGS)
+        self.assertEqual(funds, {"Prompt", "Late"})
+
+    def test_an_empty_ledger_disables_the_gate(self):
+        empty = pd.DataFrame(columns=["Quarter", "Fund", "Filing_Date"])
+        self.assertIsNone(
+            published_funds("2025Q1", date(2025, 5, 16), filing_dates_fn=lambda: empty)
+        )
+
+    def test_a_quarter_absent_from_the_ledger_disables_the_gate(self):
+        self.assertIsNone(
+            published_funds("2019Q4", date(2025, 5, 16), filing_dates_fn=lambda: FILINGS)
+        )
+
+    def test_an_unparseable_filing_date_is_treated_as_unpublished(self):
+        rows = pd.DataFrame([{"Quarter": "2025Q1", "Fund": "Broken", "Filing_Date": "x"}])
+        self.assertEqual(
+            published_funds("2025Q1", date(2026, 1, 1), filing_dates_fn=lambda: rows), set()
+        )
+
+
+class PublicationGateTests(unittest.TestCase):
+    """
+    The gate drops holdings rows belonging to funds that had not filed yet.
+    """
+
+    def test_rows_of_unpublished_funds_are_dropped(self):
+        gated = gate_to_published(
+            QUARTER_ROWS, "2025Q1", date(2025, 5, 16), filing_dates_fn=lambda: FILINGS
+        )
+        self.assertEqual(list(gated["Fund"]), ["Prompt"])
+
+    def test_no_as_of_keeps_every_row(self):
+        gated = gate_to_published(QUARTER_ROWS, "2025Q1", None, filing_dates_fn=lambda: FILINGS)
+        self.assertEqual(len(gated), 3)
+
+    def test_an_empty_ledger_keeps_every_row(self):
+        empty = pd.DataFrame(columns=["Quarter", "Fund", "Filing_Date"])
+        gated = gate_to_published(
+            QUARTER_ROWS, "2025Q1", date(2025, 5, 16), filing_dates_fn=lambda: empty
+        )
+        self.assertEqual(len(gated), 3)
+
+    def test_the_input_frame_is_not_mutated(self):
+        gate_to_published(
+            QUARTER_ROWS, "2025Q1", date(2025, 5, 16), filing_dates_fn=lambda: FILINGS
+        )
+        self.assertEqual(len(QUARTER_ROWS), 3)

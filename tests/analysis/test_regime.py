@@ -1,15 +1,19 @@
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
 from app.analysis.regime import (
+    SUBSECTOR_BY_INDUSTRY,
     build_regime_rows,
     detect_splits,
     drop_anomalous_funds,
     harmonise_basis,
     quarter_levels,
+    regime_group,
     transition_metrics,
 )
+from app.database import DB_FOLDER, SECTOR_HIERARCHY_FILE
 
 
 def holding(fund: str, cusip: str, shares: float, price: float, ticker: str = "") -> dict:
@@ -250,6 +254,45 @@ class TestQuarterLevels(unittest.TestCase):
         ]
         levels = quarter_levels(frame(rows))
         self.assertAlmostEqual(levels["mega_weight_pct"], 25.0)
+
+
+class TestRegimeGroup(unittest.TestCase):
+    def test_rolls_technology_industries_up_to_named_subsectors(self):
+        """
+        A fund rotating from software into semiconductors is invisible at the
+        "Technology" level, so those industries carry their own labels.
+        """
+        self.assertEqual(regime_group("Semiconductors", "Technology"), "Semiconductors")
+        self.assertEqual(
+            regime_group("Semiconductor Equipment & Materials", "Technology"), "Semiconductors"
+        )
+        self.assertEqual(regime_group("Software - Application", "Technology"), "Software")
+        self.assertEqual(regime_group("Software - Infrastructure", "Technology"), "Software")
+
+    def test_rolls_healthcare_industries_up_to_named_subsectors(self):
+        """
+        Biotech and large-cap pharma move on entirely different catalysts.
+        """
+        self.assertEqual(regime_group("Biotechnology", "Healthcare"), "Biotech")
+        self.assertEqual(
+            regime_group("Drug Manufacturers - General", "Healthcare"), "Pharmaceuticals"
+        )
+
+    def test_keeps_the_parent_sector_label_for_an_unmapped_industry(self):
+        """
+        Only the broad, multi-theme sectors are split; everything else is
+        unchanged.
+        """
+        self.assertEqual(regime_group("Gold", "Basic Materials"), "Basic Materials")
+        self.assertEqual(regime_group("Grocery Stores", "Consumer Defensive"), "Consumer Defensive")
+
+    def test_every_mapped_industry_exists_in_the_hierarchy(self):
+        """
+        A subsector keyed on an industry string the hierarchy never emits is a
+        silent no-op - guard against typos in the map.
+        """
+        known = set(pd.read_csv(Path(DB_FOLDER) / SECTOR_HIERARCHY_FILE, dtype=str)["Industry"])
+        self.assertEqual(set(SUBSECTOR_BY_INDUSTRY) - known, set())
 
 
 class TestBuildRegimeRows(unittest.TestCase):
