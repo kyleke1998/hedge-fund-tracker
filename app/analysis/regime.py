@@ -19,6 +19,7 @@ universe never registers as trading. Level metrics (sector and mega-cap weights)
 are shares of that quarter's own reported value.
 """
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -104,14 +105,77 @@ SUBSECTOR_BY_INDUSTRY = {
 }
 
 
-def regime_group(industry: str, sector: str) -> str:
-    """
-    The subsector bucket an industry rolls up to on the regime chart.
+# Crypto and fintech cut across Yahoo's taxonomy - Coinbase is an exchange,
+# the miners are "Capital Markets", Strategy is "Software", PayPal is "Credit
+# Services", Block is "Software - Infrastructure" - so no industry mapping can
+# isolate them. These themes are keyed by ticker and take precedence over it.
+CRYPTO = "Crypto"
+FINTECH = "Fintech"
 
-    A few broad Yahoo sectors trade as several distinct themes, so their
-    industries map to named subsectors (Semiconductors, Software, Biotech, and
-    so on). Every other industry keeps its parent sector label.
+CRYPTO_TICKERS = frozenset(
+    {
+        # Exchanges, brokers, custodians, stablecoin issuers
+        "COIN", "GLXY", "CRCL", "BLSH", "GEMI", "BKKT", "EXOD", "BTGO",
+        # Treasury companies
+        "MSTR", "MSTU", "BMNR", "SBET", "BTCS", "STKE", "HSDT", "USDE", "SDEV",
+        # Miners (several also host AI compute, but bitcoin still drives them)
+        "MARA", "RIOT", "CLSK", "HUT", "ABTC", "CIFR", "IREN", "WULF", "CORZ",
+        "BTDR", "BTBT", "HIVE", "ARBK", "SDIG", "CAN",
+    }
+)  # fmt: skip
+
+FINTECH_TICKERS = frozenset(
+    {
+        # Payments and merchant acquiring
+        "PYPL", "XYZ", "ADYEY", "FOUR", "TOST", "MQ", "FLYW", "PAYO", "RELY",
+        "DLO", "STNE", "PAGS", "EVTC", "PAY", "RPAY", "PSFE", "IIIV", "IMXI",
+        "EEFT", "ACIW", "FIS", "GPN", "CPAY", "WEX", "BILL", "AVDX",
+        # Digital lenders and neobanks
+        "AFRM", "SOFI", "UPST", "NU", "CHYM", "KLAR", "DAVE", "SEZL", "ML",
+        "OPFI", "PGY", "ENVA", "OPRT", "GDOT", "FIGR",
+        # App-first brokers
+        "HOOD", "BULL", "ETOR", "FUTU", "TIGR",
+        # Banking software
+        "NCNO", "QTWO", "ALKT", "BLND", "JKHY",
+    }
+)  # fmt: skip
+
+# Crypto ETFs and trusts are too numerous to list, but their names say what
+# they hold. Inverse products are a bet against the theme, so they are not.
+_CRYPTO_NAME = re.compile(
+    r"\b(bitcoin|ether|ethereum|crypto|blockchain|solana|stablecoin|xrp|digital asset)\b",
+    re.IGNORECASE,
+)
+_INVERSE_NAME = re.compile(r"\b(short|inverse|bear|ultrashort)\b", re.IGNORECASE)
+_SHELL_INDUSTRY = "Shell Companies"
+
+
+def _is_crypto(ticker: str, company: str, industry: str) -> bool:
     """
+    Whether a security is crypto exposure: a listed crypto company, or a
+    long crypto product recognised by name (never a cash-only SPAC shell).
+    """
+    if ticker in CRYPTO_TICKERS:
+        return True
+    if industry == _SHELL_INDUSTRY or _INVERSE_NAME.search(company):
+        return False
+    return bool(_CRYPTO_NAME.search(company))
+
+
+def regime_group(industry: str, sector: str, ticker: str = "", company: str = "") -> str:
+    """
+    The subsector bucket a security rolls up to on the regime chart.
+
+    Crypto and Fintech are cross-industry themes resolved from the ticker (and,
+    for crypto products, the name) before anything else. A few broad Yahoo
+    sectors trade as several distinct themes, so their industries map to named
+    subsectors (Semiconductors, Software, Biotech, and so on). Every other
+    industry keeps its parent sector label.
+    """
+    if _is_crypto(ticker, company, industry):
+        return CRYPTO
+    if ticker in FINTECH_TICKERS:
+        return FINTECH
     return SUBSECTOR_BY_INDUSTRY.get(industry, sector)
 
 
@@ -501,8 +565,10 @@ def _sector_map() -> dict[str, str]:
     industry_to_sector = dict(zip(hierarchy["Industry"], hierarchy["Sector"], strict=False))
     # load_stocks() indexes by CUSIP rather than carrying it as a column.
     return {
-        str(cusip): regime_group(industry, industry_to_sector[industry])
-        for cusip, industry in zip(stocks.index, stocks["Industry"], strict=False)
+        str(cusip): regime_group(industry, industry_to_sector[industry], str(ticker), str(company))
+        for cusip, industry, ticker, company in zip(
+            stocks.index, stocks["Industry"], stocks["Ticker"], stocks["Company"], strict=False
+        )
         if industry in industry_to_sector
     }
 

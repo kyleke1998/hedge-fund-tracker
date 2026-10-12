@@ -4,7 +4,10 @@ from pathlib import Path
 import pandas as pd
 
 from app.analysis.regime import (
+    CRYPTO_TICKERS,
+    FINTECH_TICKERS,
     SUBSECTOR_BY_INDUSTRY,
+    _sector_map,
     build_regime_rows,
     detect_splits,
     drop_anomalous_funds,
@@ -13,7 +16,7 @@ from app.analysis.regime import (
     regime_group,
     transition_metrics,
 )
-from app.database import DB_FOLDER, SECTOR_HIERARCHY_FILE
+from app.database import DB_FOLDER, SECTOR_HIERARCHY_FILE, load_stocks
 
 
 def holding(fund: str, cusip: str, shares: float, price: float, ticker: str = "") -> dict:
@@ -293,6 +296,109 @@ class TestRegimeGroup(unittest.TestCase):
         """
         known = set(pd.read_csv(Path(DB_FOLDER) / SECTOR_HIERARCHY_FILE, dtype=str)["Industry"])
         self.assertEqual(set(SUBSECTOR_BY_INDUSTRY) - known, set())
+
+
+class TestCryptoAndFintechGroups(unittest.TestCase):
+    def test_pulls_crypto_names_out_of_whatever_industry_yahoo_filed_them_under(self):
+        """
+        Yahoo scatters crypto across exchanges, capital markets and software, so
+        no industry mapping can isolate it; the ticker decides.
+        """
+        self.assertEqual(
+            regime_group("Financial Data & Stock Exchanges", "Financial Services", "COIN"), "Crypto"
+        )
+        self.assertEqual(regime_group("Capital Markets", "Financial Services", "MARA"), "Crypto")
+        self.assertEqual(regime_group("Software - Application", "Technology", "MSTR"), "Crypto")
+
+    def test_classifies_crypto_etfs_by_name(self):
+        """
+        Spot and levered crypto ETFs are the biggest crypto exposure funds hold,
+        and there are too many to list by ticker.
+        """
+        self.assertEqual(regime_group("ETF", "ETF", "IBIT", "iShares Bitcoin Trust ETF"), "Crypto")
+        self.assertEqual(regime_group("ETF", "ETF", "ETHA", "iShares Ethereum Trust ETF"), "Crypto")
+        self.assertEqual(regime_group("ETF", "ETF", "VSOL", "VanEck Solana ETF"), "Crypto")
+
+    def test_inverse_crypto_products_are_not_crypto_exposure(self):
+        """
+        A long position in a short-bitcoin ETF is a bet against the theme.
+        """
+        self.assertEqual(regime_group("ETF", "ETF", "BITI", "ProShares Short Bitcoin ETF"), "ETF")
+        self.assertEqual(
+            regime_group("ETF", "ETF", "ETHD", "ProShares UltraShort Ether ETF"), "ETF"
+        )
+        self.assertEqual(
+            regime_group("ETF", "ETF", "BTCZ", "T-Rex 2X Inverse Bitcoin Daily Target ETF"), "ETF"
+        )
+
+    def test_crypto_named_spac_shells_hold_cash_not_crypto(self):
+        """
+        A blank-check trust named after digital assets holds Treasuries.
+        """
+        self.assertEqual(
+            regime_group(
+                "Shell Companies", "Financial Services", "DAAQ", "Digital Asset Acquisition Co"
+            ),
+            "Financial Services",
+        )
+
+    def test_name_rule_matches_whole_words_only(self):
+        """
+        "Ether" inside another word is not Ethereum.
+        """
+        self.assertEqual(
+            regime_group("Software - Application", "Technology", "ATHR", "Aether Holdings Inc"),
+            "Software",
+        )
+
+    def test_pulls_fintech_names_out_of_their_yahoo_industries(self):
+        """
+        Payments, digital lenders and neobanks are filed as credit services,
+        software, capital markets or regional banks.
+        """
+        self.assertEqual(regime_group("Credit Services", "Financial Services", "PYPL"), "Fintech")
+        self.assertEqual(regime_group("Software - Infrastructure", "Technology", "XYZ"), "Fintech")
+        self.assertEqual(regime_group("Capital Markets", "Financial Services", "HOOD"), "Fintech")
+        self.assertEqual(regime_group("Banks - Regional", "Financial Services", "NU"), "Fintech")
+
+    def test_card_networks_and_incumbents_keep_their_sector(self):
+        """
+        Fintech means the technology-led challengers; Visa, Mastercard and
+        Goldman would drown the theme in incumbent weight.
+        """
+        self.assertEqual(
+            regime_group("Credit Services", "Financial Services", "V"), "Financial Services"
+        )
+        self.assertEqual(
+            regime_group("Credit Services", "Financial Services", "MA"), "Financial Services"
+        )
+        self.assertEqual(
+            regime_group("Capital Markets", "Financial Services", "GS"), "Capital Markets"
+        )
+
+    def test_theme_lists_do_not_overlap(self):
+        """
+        A ticker in both lists would land wherever the check order happens to put it.
+        """
+        self.assertEqual(CRYPTO_TICKERS & FINTECH_TICKERS, frozenset())
+
+    def test_every_listed_ticker_exists_in_the_stocks_database(self):
+        """
+        A ticker typo is a silent no-op, so every override must match a real row.
+        """
+        known = set(load_stocks()["Ticker"])
+        self.assertEqual((CRYPTO_TICKERS | FINTECH_TICKERS) - known, set())
+
+    def test_sector_map_routes_real_cusips_into_the_new_groups(self):
+        """
+        The CUSIP map is what the panels are built from, so the themes must
+        survive the stocks.csv join.
+        """
+        sectors = _sector_map()
+        self.assertEqual(sectors["19260Q107"], "Crypto")  # COIN
+        self.assertEqual(sectors["46438F101"], "Crypto")  # IBIT
+        self.assertEqual(sectors["70450Y103"], "Fintech")  # PYPL
+        self.assertEqual(sectors["92826C839"], "Financial Services")  # V
 
 
 class TestBuildRegimeRows(unittest.TestCase):
