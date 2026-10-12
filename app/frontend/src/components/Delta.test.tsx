@@ -24,18 +24,13 @@ describe("Delta", () => {
     expect(root.textContent).toContain("-5.6%");
   });
 
-  it("renders a muted NO CHANGE label without an icon for exactly-zero values", () => {
+  it("renders a muted NO CHANGE label with the flat Minus icon for exactly-zero values", () => {
     const { container } = render(<Delta value={0} mode="percent" />);
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain("text-muted-foreground");
     expect(root.textContent).toContain("NO CHANGE");
     expect(root.textContent).not.toContain("0.0%");
-    expect(root.querySelector("svg")).toBeNull();
-  });
-
-  it("keeps the custom formatter output for zero values", () => {
-    const { container } = render(<Delta value={0} mode="percent" format={() => "flat"} />);
-    expect(container.textContent).toContain("flat");
+    expect(root.querySelector("svg")).not.toBeNull();
   });
 
   it("formats currency values with sign + compact suffix", () => {
@@ -50,8 +45,10 @@ describe("Delta", () => {
     expect(root.textContent).toContain("NEW");
   });
 
-  it("honours a custom formatter when provided", () => {
-    const { container } = render(<Delta value={42} mode="percent" format={(v) => `${v} units`} />);
-    expect(container.textContent).toContain("42 units");
+  it.each([42, 0])("honours a custom formatter for %d", (value) => {
+    const { container } = render(
+      <Delta value={value} mode="percent" format={(v) => `${v} units`} />,
+    );
+    expect(container.textContent).toContain(`${value} units`);
   });
 });

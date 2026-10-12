@@ -1,9 +1,6 @@
 import math
 import os
 import shutil
-import sys
-from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
-from pathlib import Path
 
 from tabulate import tabulate
 
@@ -15,35 +12,6 @@ from app.database import (
     load_models,
 )
 from app.utils.strings import get_previous_quarter
-
-# Ensure UTF-8 encoding for stdout and stderr, especially on Windows.
-# `reconfigure` exists on TextIOWrapper at runtime but not on the abstract TextIO
-# type, hence the `# type: ignore[union-attr]` for mypy's narrower view.
-if sys.stdout.encoding.lower() != "utf-8":
-    with suppress(AttributeError, Exception):
-        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-if sys.stderr.encoding.lower() != "utf-8":
-    with suppress(AttributeError, Exception):
-        sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-
-
-@contextmanager
-def silence_output():
-    """
-    Context manager to silence stdout and stderr in single-threaded code.
-
-    WARNING: NOT thread-safe. ``redirect_stdout`` / ``redirect_stderr`` rebind
-    the process-global ``sys.stdout`` / ``sys.stderr``; concurrent callers
-    leave the restore stack in an inconsistent state, eventually pointing
-    one of the streams at an already-closed file descriptor (symptom:
-    ``ValueError: I/O operation on closed file. lost sys.stderr``).
-
-    Prefer silencing the library at its logger
-    (``logging.getLogger("<lib>").setLevel(logging.CRITICAL)``) when the code
-    can run inside a ``ThreadPoolExecutor`` or any other multi-threaded context.
-    """
-    with Path(os.devnull).open("w") as devnull, redirect_stderr(devnull), redirect_stdout(devnull):
-        yield
 
 
 def get_terminal_width(fallback=110):

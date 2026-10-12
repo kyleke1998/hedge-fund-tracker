@@ -1,11 +1,13 @@
 import unittest
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from scripts.regenerate_reports import (
     FETCH_FLOOR,
     build_comparison_pairs,
     collect_filings_until_floor,
     dedupe_filings_by_period,
+    regenerate_fund,
 )
 
 
@@ -95,6 +97,23 @@ class TestDedupeFilingsByPeriod(unittest.TestCase):
         self.assertEqual(len(deduped), 2)
         self.assertEqual(deduped[0]["label"], "amendment")
 
+    def test_a_partial_new_holdings_amendment_completes_the_original(self):
+        """
+        A NEW HOLDINGS amendment adds its rows to the period's report instead of replacing it.
+        """
+        table = '<ns1:informationTable xmlns:ns1="x">{}</ns1:informationTable>'
+        row = "<ns1:infoTable><ns1:cusip>{}</ns1:cusip><ns1:value>{}</ns1:value></ns1:infoTable>"
+        original = _filing("2024-12-31", "original")
+        original["xml_content"] = table.format(row.format("A", 500)).encode()
+        added = _filing("2024-12-31", "added", published="2025-04-09")
+        added["xml_content"] = table.format(row.format("B", 20)).encode()
+        added["amendment_type"] = "NEW HOLDINGS"
+
+        (kept,) = dedupe_filings_by_period([added, original])
+
+        self.assertIn(b"<ns1:cusip>A</ns1:cusip>", kept["xml_content"])
+        self.assertIn(b"<ns1:cusip>B</ns1:cusip>", kept["xml_content"])
+
     def test_sorted_by_reference_date_descending(self):
         """
         Output is ordered newest reporting period first regardless of the
@@ -156,6 +175,77 @@ class TestBuildComparisonPairs(unittest.TestCase):
         self.assertEqual(len(pairs), 1)
         self.assertEqual(pairs[0][0]["reference_date"], "2025-03-31")
         self.assertEqual(pairs[0][1]["reference_date"], "2024-12-31")
+
+
+class TestRegenerateFundAppliesFilingCorrections(unittest.TestCase):
+    @patch("scripts.regenerate_reports.save_comparison")
+    @patch("scripts.regenerate_reports.generate_comparison")
+    @patch("scripts.regenerate_reports.xml_to_dataframe_13f")
+    @patch("scripts.regenerate_reports.load_split_factors", return_value={})
+    @patch("scripts.regenerate_reports.corrections_for")
+    @patch("scripts.regenerate_reports.fetch_fund_filings")
+    def test_each_filing_is_parsed_with_its_own_corrections(
+        self, mock_fetch, mock_corrections, _mock_registry, mock_xml, _mock_cmp, _mock_save
+    ):
+        """
+        Both the current and the previous filing get the corrections of their quarter.
+        """
+        mock_fetch.return_value = [_filing("2026-03-31"), _filing("2025-12-31")]
+        mock_corrections.side_effect = lambda fund, quarter: {("X", fund): quarter}
+
+        regenerate_fund({"CIK": "0000000001", "Fund": "Tester"})
+
+        passed = [call.kwargs.get("corrections") for call in mock_xml.call_args_list]
+        self.assertIn({("X", "Tester"): "2026Q1"}, passed)
+        self.assertIn({("X", "Tester"): "2025Q4"}, passed)
+
+
+class TestRegenerateFundAppliesSplits(unittest.TestCase):
+    @patch("scripts.regenerate_reports.save_comparison")
+    @patch("scripts.regenerate_reports.generate_comparison")
+    @patch("scripts.regenerate_reports.xml_to_dataframe_13f")
+    @patch("scripts.regenerate_reports.load_split_factors")
+    @patch("scripts.regenerate_reports.fetch_fund_filings")
+    def test_each_quarter_gets_its_own_split_factors(
+        self, mock_fetch, mock_registry, mock_xml, mock_comparison, _mock_save
+    ):
+        mock_fetch.return_value = [
+            _filing("2026-06-30"),
+            _filing("2026-03-31"),
+            _filing("2025-12-31"),
+        ]
+        mock_registry.return_value = {
+            "2026Q2": {"146869102": 5.0},
+            "2025Q4": {"64110L106": 10.0},
+        }
+
+        regenerate_fund({"CIK": "0000000001", "Fund": "Tester"})
+
+        applied = [call.args[2] for call in mock_comparison.call_args_list]
+        self.assertIn({"146869102": 5.0}, applied)
+        # 2026Q1 has no split on record and must be compared untouched.
+        self.assertIn({}, applied)
+
+    @patch("scripts.regenerate_reports.save_comparison")
+    @patch("scripts.regenerate_reports.generate_comparison")
+    @patch("scripts.regenerate_reports.xml_to_dataframe_13f")
+    @patch("scripts.regenerate_reports.load_split_factors")
+    @patch("scripts.regenerate_reports.fetch_fund_filings")
+    def test_a_skipped_quarter_compounds_the_splits_it_spans(
+        self, mock_fetch, mock_registry, mock_xml, mock_comparison, _mock_save
+    ):
+        # No 2026Q1 filing, so 2026Q2 is compared against 2025Q4 and both
+        # quarters' splits sit between the two filings.
+        mock_fetch.return_value = [_filing("2026-06-30"), _filing("2025-12-31")]
+        mock_registry.return_value = {
+            "2026Q1": {"64110L106": 2.0},
+            "2026Q2": {"64110L106": 3.0},
+        }
+
+        regenerate_fund({"CIK": "0000000001", "Fund": "Tester"})
+
+        applied = [call.args[2] for call in mock_comparison.call_args_list]
+        self.assertIn({"64110L106": 6.0}, applied)
 
 
 if __name__ == "__main__":

@@ -53,6 +53,7 @@ export { getSectorHierarchy, getStocks } from "./data/stocks";
 export {
   generateModelsCSV,
   getModels,
+  isModelProvider,
   MODEL_PROVIDERS,
   PROVIDER_DISPLAY_NAMES,
   type ModelProvider,
@@ -69,6 +70,13 @@ export {
 
 export { getPerformance, parsePerformanceRows } from "./data/performance";
 export { getRegime, parseRegimeRows, reindexShareIndex, sectorWindowChange } from "./data/regime";
+export {
+  FUND_SERIES_ID,
+  getFundPerformance,
+  getFundPerformanceRows,
+  parseFundPerformance,
+} from "./data/fundPerformance";
+export type { FundPerformance } from "./data/fundPerformance";
 
 export { enrichNQFiling, getEnrichedNQFilings, getNonQuarterlyFilings } from "./data/nonQuarterly";
 

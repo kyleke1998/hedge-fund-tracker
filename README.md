@@ -14,21 +14,21 @@
 [![GitHub watchers](https://img.shields.io/github/watchers/dokson/hedge-fund-tracker?style=for-the-badge&color=9C27B0&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik04IDJjMS45ODEgMCAzLjY3MS45OTIgNC45MzMgMi4wNzggMS4yNyAxLjA5MSAyLjE4NyAyLjM0NSAyLjYzNyAzLjAyM2ExLjYyIDEuNjIgMCAwIDEgMCAxLjc5OGMtLjQ1LjY3OC0xLjM2NyAxLjkzMi0yLjYzNyAzLjAyM0MxMS42NyAxMy4wMDggOS45ODEgMTQgOCAxNGMtMS45ODEgMC0zLjY3MS0uOTkyLTQuOTMzLTIuMDc4QzEuNzk3IDEwLjgzLjg4IDkuNTc2LjQzIDguODk4YTEuNjIgMS42MiAwIDAgMSAwLTEuNzk4Yy40NS0uNjc3IDEuMzY3LTEuOTMxIDIuNjM3LTMuMDIyQzQuMzMgMi45OTIgNi4wMTkgMiA4IDJaTTEuNjc5IDcuOTMyYS4xMi4xMiAwIDAgMCAwIC4xMzZjLjQxMS42MjIgMS4yNDEgMS43NSAyLjM2NiAyLjcxN0M1LjE3NiAxMS43NTggNi41MjcgMTIuNSA4IDEyLjVjMS40NzMgMCAyLjgyNS0uNzQyIDMuOTU1LTEuNzE1IDEuMTI0LS45NjcgMS45NTQtMi4wOTYgMi4zNjYtMi43MTdhLjEyLjEyIDAgMCAwIDAtLjEzNmMtLjQxMi0uNjIxLTEuMjQyLTEuNzUtMi4zNjYtMi43MTdDMTAuODI0IDQuMjQyIDkuNDczIDMuNSA4IDMuNWMtMS40NzMgMC0yLjgyNS43NDItMy45NTUgMS43MTUtMS4xMjQuOTY3LTEuOTU0IDIuMDk2LTIuMzY2IDIuNzE3Wk04IDEwYTIgMiAwIDEgMS0uMDAxLTMuOTk5QTIgMiAwIDAgMSA4IDEwWiIvPjwvc3ZnPg==)](https://github.com/dokson/hedge-fund-tracker/watchers)
 [![License](https://img.shields.io/badge/license-Source_Available-blue?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik04Ljc1Ljc1VjJoLjk4NWMuMzA0IDAgLjYwMy4wOC44NjcuMjMxbDEuMjkuNzM2Yy4wMzguMDIyLjA4LjAzMy4xMjQuMDMzaDIuMjM0YS43NS43NSAwIDAgMSAwIDEuNWgtLjQyN2wyLjExMSA0LjY5MmEuNzUuNzUgMCAwIDEtLjE1NC44MzhsLS41My0uNTMuNTI5LjUzMS0uMDAxLjAwMi0uMDAyLjAwMi0uMDA2LjAwNi0uMDA2LjAwNS0uMDEuMDEtLjA0NS4wNGMtLjIxLjE3Ni0uNDQxLjMyNy0uNjg2LjQ1QzE0LjU1NiAxMC43OCAxMy44OCAxMSAxMyAxMWE0LjQ5OCA0LjQ5OCAwIDAgMS0yLjAyMy0uNDU0IDMuNTQ0IDMuNTQ0IDAgMCAxLS42ODYtLjQ1bC0uMDQ1LS4wNC0uMDE2LS4wMTUtLjAwNi0uMDA2LS4wMDQtLjAwNHYtLjAwMWEuNzUuNzUgMCAwIDEtLjE1NC0uODM4TDEyLjE3OCA0LjVoLS4xNjJjLS4zMDUgMC0uNjA0LS4wNzktLjg2OC0uMjMxbC0xLjI5LS43MzZhLjI0NS4yNDUgMCAwIDAtLjEyNC0uMDMzSDguNzVWMTNoMi41YS43NS43NSAwIDAgMSAwIDEuNWgtNi41YS43NS43NSAwIDAgMSAwLTEuNWgyLjVWMy41aC0uOTg0YS4yNDUuMjQ1IDAgMCAwLS4xMjQuMDMzbC0xLjI4OS43MzdjLS4yNjUuMTUtLjU2NC4yMy0uODY5LjIzaC0uMTYybDIuMTEyIDQuNjkyYS43NS43NSAwIDAgMS0uMTU0LjgzOGwtLjUzLS41My41MjkuNTMxLS4wMDEuMDAyLS4wMDIuMDAyLS4wMDYuMDA2LS4wMTYuMDE1LS4wNDUuMDRjLS4yMS4xNzYtLjQ0MS4zMjctLjY4Ni40NUM0LjU1NiAxMC43OCAzLjg4IDExIDMgMTFhNC40OTggNC40OTggMCAwIDEtMi4wMjMtLjQ1NCAzLjU0NCAzLjU0NCAwIDAgMS0uNjg2LS40NWwtLjA0NS0uMDQtLjAxNi0uMDE1LS4wMDYtLjAwNi0uMDA0LS4wMDR2LS4wMDFhLjc1Ljc1IDAgMCAxLS4xNTQtLjgzOEwyLjE3OCA0LjVIMS43NWEuNzUuNzUgMCAwIDEgMC0xLjVoMi4yMzRhLjI0OS4yNDkgMCAwIDAgLjEyNS0uMDMzbDEuMjg4LS43MzdjLjI2NS0uMTUuNTY0LS4yMy44NjktLjIzaC45ODRWLjc1YS43NS43NSAwIDAgMSAxLjUgMFptMi45NDUgOC40NzdjLjI4NS4xMzUuNzE4LjI3MyAxLjMwNS4yNzNzMS4wMi0uMTM4IDEuMzA1LS4yNzNMMTMgNi4zMjdabS0xMCAwYy4yODUuMTM1LjcxOC4yNzMgMS4zMDUuMjczczEuMDItLjEzOCAxLjMwNS0uMjczTDMgNi4zMjdaIi8+PC9zdmc+&logoColor=white)](LICENSE)
 
-[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white&style=for-the-badge)](https://www.python.org/downloads/release/python-3130/)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white&style=for-the-badge)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.14+-3776AB?logo=python&logoColor=white&style=for-the-badge)](https://www.python.org/downloads/release/python-3140/)
+[![Node.js](https://img.shields.io/badge/Node.js-24+-339933?logo=node.js&logoColor=white&style=for-the-badge)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/github/pipenv/locked/dependency-version/dokson/hedge-fund-tracker/fastapi?style=for-the-badge&logo=fastapi&logoColor=white&color=009688)](https://fastapi.tiangolo.com/)
 [![Pandas](https://img.shields.io/pypi/v/pandas?style=for-the-badge&logo=pandas&logoColor=white&label=Pandas&color=150458)](https://pandas.pydata.org/)
 [![Google AI](https://img.shields.io/github/pipenv/locked/dependency-version/dokson/hedge-fund-tracker/google-genai?style=for-the-badge&logo=google&logoColor=white&color=4285F4)](https://github.com/googleapis/python-genai)
 [![OpenAI](https://img.shields.io/github/pipenv/locked/dependency-version/dokson/hedge-fund-tracker/openai?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTguNzEyOCAxNTcuMjk2IiBmaWxsPSJ3aGl0ZSI+PHBhdGggZD0iTTYwLjg3MzQsNTcuMjU1NnYtMTQuOTQzMmMwLTEuMjU4Ni40NzIyLTIuMjAyOSwxLjU3MjgtMi44MzE0bDMwLjA0NDMtMTcuMzAyM2M0LjA4OTktMi4zNTkzLDguOTY2Mi0zLjQ1OTksMTMuOTk4OC0zLjQ1OTksMTguODc1OSwwLDMwLjgzMDcsMTQuNjI4OSwzMC44MzA3LDMwLjIwMDYsMCwxLjEwMDcsMCwyLjM1OTMtLjE1OCwzLjYxNzhsLTMxLjE0NDYtMTguMjQ2N2MtMS44ODcyLTEuMTAwNi0zLjc3NTQtMS4xMDA2LTUuNjYyOSwwbC0zOS40ODEyLDIyLjk2NTFaTTEzMS4wMjc2LDExNS40NTYxdi0zNS43MDc0YzAtMi4yMDI4LS45NDQ2LTMuNzc1Ni0yLjgzMTgtNC44NzYzbC0zOS40ODEtMjIuOTY1MSwxMi44OTgyLTcuMzkzNGMxLjEwMDctLjYyODUsMi4wNDUzLS42Mjg1LDMuMTQ1OCwwbDMwLjA0NDEsMTcuMzAyNGM4LjY1MjMsNS4wMzQxLDE0LjQ3MDgsMTUuNzI5NiwxNC40NzA4LDI2LjExMDcsMCwxMS45NTM5LTcuMDc2OSwyMi45NjUtMTguMjQ2MSwyNy41Mjd2LjAwMjFaTTUxLjU5Myw4My45OTY0bC0xMi44OTgyLTcuNTQ5N2MtMS4xMDA3LS42Mjg1LTEuNTcyOC0xLjU3MjgtMS41NzI4LTIuODMxNHYtMzQuNjA0OGMwLTE2LjgzMDMsMTIuODk4Mi0yOS41NzIyLDMwLjM1ODUtMjkuNTcyMiw2LjYwNywwLDEyLjc0MDMsMi4yMDI5LDE3LjkzMjQsNi4xMzQ5bC0zMC45ODcsMTcuOTMyNGMtMS44ODcxLDEuMTAwNy0yLjgzMTQsMi42NzM1LTIuODMxNCw0Ljg3NjR2NDUuNjE1OWwtLjAwMTQtLjAwMTVaTTc5LjM1NjIsMTAwLjA0MDNsLTE4LjQ4MjktMTAuMzgxMXYtMjIuMDIwOWwxOC40ODI5LTEwLjM4MTEsMTguNDgxMiwxMC4zODExdjIyLjAyMDlsLTE4LjQ4MTIsMTAuMzgxMVpNOTEuMjMxOSwxNDcuODU5MWMtNi42MDcsMC0xMi43NDAzLTIuMjAzMS0xNy45MzI0LTYuMTM0NGwzMC45ODY2LTE3LjkzMzNjMS44ODcyLTEuMTAwNSwyLjgzMTgtMi42NzI4LDIuODMxOC00Ljg3NTl2LTQ1LjYxNmwxMy4wNTY0LDcuNTQ5OGMxLjEwMDUuNjI4NSwxLjU3MjMsMS41NzI4LDEuNTcyMywyLjgzMTR2MzQuNjA1MWMwLDE2LjgyOTctMTMuMDU2NCwyOS41NzIzLTMwLjUxNDcsMjkuNTcyM3YuMDAxWk01My45NTIyLDExMi43ODIybC0zMC4wNDQzLTE3LjMwMjRjLTguNjUyLTUuMDM0My0xNC40NzEtMTUuNzI5Ni0xNC40NzEtMjYuMTEwNywwLTEyLjExMTksNy4yMzU2LTIyLjk2NTIsMTguNDAzLTI3LjUyNzJ2MzUuODYzNGMwLDIuMjAyOC45NDQzLDMuNzc1NiwyLjgzMTQsNC44NzYzbDM5LjMyNDgsMjIuODA2OC0xMi44OTgyLDcuMzkzOGMtMS4xMDA3LjYyODctMi4wNDUuNjI4Ny0zLjE0NTYsMFpNNTIuMjIyOSwxMzguNTc5MWMtMTcuNzc0NSwwLTMwLjgzMDYtMTMuMzcxMy0zMC44MzA2LTI5Ljg4NzEsMC0xLjI1ODUuMTU3OC0yLjUxNjkuMzE0My0zLjc3NTRsMzAuOTg3LDE3LjkzMjNjMS44ODcxLDEuMTAwNSwzLjc3NTcsMS4xMDA1LDUuNjYyOCwwbDM5LjQ4MTEtMjIuODA3djE0Ljk0MzVjMCwxLjI1ODUtLjQ3MjEsMi4yMDIxLTEuNTcyOCwyLjgzMDhsLTMwLjA0NDMsMTcuMzAyNWMtNC4wODk4LDIuMzU5LTguOTY2MiwzLjQ2MDUtMTMuOTk4OSwzLjQ2MDVoLjAwMTRaTTkxLjIzMTksMTU3LjI5NmMxOS4wMzI3LDAsMzQuOTE4OC0xMy41MjcyLDM4LjUzODMtMzEuNDU5NCwxNy42MTY0LTQuNTYyLDI4Ljk0MjUtMjEuMDc3OSwyOC45NDI1LTM3LjkwOCwwLTExLjAxMTItNC43MTktMjEuNzA2Ni0xMy4yMTMzLTI5LjQxNDMuNzg2Ny0zLjMwMzUsMS4yNTk1LTYuNjA3LDEuMjU5NS05LjkwOSwwLTIyLjQ5MjktMTguMjQ3MS0zOS4zMjQ3LTM5LjMyNTEtMzkuMzI0Ny00LjI0NjEsMC04LjMzNjMuNjI4NS0xMi40MjYyLDIuMDQ1LTcuMDc5Mi02LjkyMTMtMTYuODMxOC0xMS4zMjU0LTI3LjUyNzEtMTEuMzI1NC0xOS4wMzMxLDAtMzQuOTE5MSwxMy41MjY4LTM4LjUzODQsMzEuNDU5MUMxMS4zMjU1LDM2LjAyMTIsMCw1Mi41MzczLDAsNjkuMzY3NWMwLDExLjAxMTIsNC43MTg0LDIxLjcwNjUsMTMuMjEyNSwyOS40MTQyLS43ODY1LDMuMzAzNS0xLjI1ODYsNi42MDY3LTEuMjU4Niw5LjkwOTIsMCwyMi40OTIzLDE4LjI0NjYsMzkuMzI0MSwzOS4zMjQ4LDM5LjMyNDEsNC4yNDYyLDAsOC4zMzYyLS42Mjc3LDEyLjQyNi0yLjA0NDEsNy4wNzc2LDYuOTIxLDE2LjgzMDIsMTEuMzI1MSwyNy41MjcxLDExLjMyNTFaIi8+PC9zdmc+&color=white)](https://github.com/openai/openai-python)
 
-[![TypeScript](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/typescript?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=typescript&logoColor=white&label=TypeScript&color=3178C6)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/dev/typescript?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=typescript&logoColor=white&label=TypeScript&color=3178C6)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/react?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=react&logoColor=white&color=61DAFB)](https://react.dev/)
-[![Vite](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/vite?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=vite&label=Vite&logoColor=white&color=646CFF)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/dev/vite?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=vite&label=Vite&logoColor=white&color=646CFF)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/tailwindcss?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=tailwind-css&label=Tailwind-CSS&logoColor=white&color=06B6D4)](https://tailwindcss.com/)
 [![Radix UI](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/%40radix-ui%2Freact-dialog?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=radix-ui&label=Radix&logoColor=white&color=161618)](https://www.radix-ui.com/)
 [![Lucide](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/lucide-react?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=lucide&label=Lucide&logoColor=white&color=F56565)](https://lucide.dev/)
-[![TanStack Query](https://img.shields.io/npm/v/%40tanstack/react-query?style=for-the-badge&logo=reactquery&logoColor=white&label=TanStack%20Query&color=FF4154)](https://tanstack.com/query/latest)
-[![React Router](https://img.shields.io/npm/v/react-router?style=for-the-badge&logo=reactrouter&logoColor=white&label=React%20Router&color=CA4245)](https://reactrouter.com/)
+[![TanStack Query](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/%40tanstack%2Freact-query?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=reactquery&logoColor=white&label=TanStack%20Query&color=FF4154)](https://tanstack.com/query/latest)
+[![React Router](https://img.shields.io/github/package-json/dependency-version/dokson/hedge-fund-tracker/react-router?filename=app%2Ffrontend%2Fpackage.json&style=for-the-badge&logo=reactrouter&logoColor=white&label=React%20Router&color=CA4245)](https://reactrouter.com/)
 
 
 **If this tool is helping you, please ⭐ the repo!** It really helps discoverability.
@@ -42,7 +42,7 @@ A comprehensive **Python tool** for tracking **hedge fund portfolios** through *
 - [📊 Hedge Fund Tracker](#-hedge-fund-tracker)
   - [⫶☰ Table of Contents](#-table-of-contents)
   - [🚀 Quick Start](#-quick-start)
-    - [🐳 Or use Docker (no Python/Node required)](#-or-use-docker-no-pythonnode-required)
+    - [🐳 Or use Docker (no local build required)](#-or-use-docker-no-local-build-required)
   - [✨ Key Features](#-key-features)
   - [📦 Installation](#-installation)
     - [Prerequisites](#prerequisites)
@@ -63,7 +63,7 @@ A comprehensive **Python tool** for tracking **hedge fund portfolios** through *
     - [A Truly Up-to-Date View](#a-truly-up-to-date-view)
   - [🐳 Docker Deployment](#-docker-deployment)
     - [What Docker Provides](#what-docker-provides)
-    - [Cloud Deployment](#cloud-deployment)
+    - [Planned: Public Cloud Deployment](#planned-public-cloud-deployment)
   - [🌐 GitHub Pages Deployment](#-github-pages-deployment)
     - [What's Available in GitHub Pages Mode](#whats-available-in-github-pages-mode)
     - [How to Deploy](#how-to-deploy)
@@ -97,12 +97,17 @@ pipenv run build-frontend
 pipenv run app
 ```
 
-### 🐳 Or use Docker (no Python/Node required)
+### 🐳 Or use Docker (no local build required)
 
 ```bash
-cp .env.example .env
+python scripts/generate_secrets.py --write   # creates .env with freshly generated secrets
 docker compose up --build
 ```
+
+`docker compose` starts the app **and** a Postgres container. The required secrets
+(`POSTGRES_PASSWORD`, `MASTER_KEY`, `RESET_PASSWORD_TOKEN_SECRET`, `VERIFICATION_TOKEN_SECRET`) have
+no defaults: if any of them is missing, `docker compose up` aborts instead of starting. Optional API
+keys can be copied into the same `.env` from [`.env.example`](.env.example).
 
 The app will be available at `http://localhost:8000`.
 
@@ -110,12 +115,12 @@ The app will be available at `http://localhost:8000`.
 
 | Feature | Description |
 | :--- | :--- |
-| **🌐 Modern Web UI** | Premium React-based platform with real-time SSE streaming for AI tasks, native Dark Mode, and responsive design. |
+| **🌐 Web UI** | React interface laid out as a terminal-style register, with a sidebar grouped into **Board / AI / Info / Admin**, system-sans typography, light/dark themes following the OS, and SSE streaming for long-running AI tasks. |
 | **📊 Visual Analytics** | Interactive charts (Recharts) to track institutional holdings, sectoral trends, and quarterly portfolio evolutions. |
 | **🆚 Comparative Analysis** | Combines quarterly (13F) and non-quarterly (13D/G, Form 4) filings for an up-to-date view. |
-| **📋 Comprehensive Reports** | High-fidelity analysis pages for both investment funds (portfolios) and specific stocks (tickers). |
+| **📋 Fund & Stock Pages** | Per-fund portfolio pages (holdings, weights, quarter-over-quarter deltas, composition by stock and by sector) and per-ticker analysis pages (which tracked funds own it and how their conviction is shifting). |
 | **🔍 Smart Ticker Resolution** | Multi-fallback system (yfinance → OpenFIGI → TradingView) resolves CUSIPs into actionable stock symbols, with company-rename handling via TradingView's name-search fallback. Form 4 reverse lookups (ticker → CUSIP) go through Financial Modeling Prep. |
-| **🤖 AI Financial Analyst** | Leverages top-tier LLMs to calculate "Promise Scores" and perform deep due diligence on high-conviction opportunities. |
+| **🤖 AI Financial Analyst** | An LLM ranks stocks by "Promise Score" from the institutional filing data (how many tracked funds hold a stock, how large the positions are, how they changed) and writes a due-diligence report on a single ticker. |
 | **⚙️ Automated Data Pipeline** | Scheduled GitHub Actions to fetch, process, and commit the latest SEC filings directly to your repository. |
 | **🌐 GitHub Pages Demo** | Static deployment with bundled data — all analysis features work without a backend. |
 | **⭐ Personalized Watchlist** | Star your favorite funds or stocks for quick access and personalized tracking across the platform. |
@@ -127,8 +132,8 @@ The app will be available at `http://localhost:8000`.
 
 ### Prerequisites
 
-- [Python 3.13](https://www.python.org/downloads/release/python-3130/)+
-- [Node.js](https://nodejs.org/) 20+ (for the React frontend)
+- [Python 3.14](https://www.python.org/downloads/release/python-3140/)+
+- [Node.js](https://nodejs.org/) 24+ (for the React frontend)
 - [pipenv](https://pipenv.pypa.io/) (install with `pip install pipenv`)
 
 1. **📥 Clone and navigate:**
@@ -160,10 +165,10 @@ The app will be available at `http://localhost:8000`.
 
    This starts a FastAPI server (default `http://localhost:8000`, auto-increments if port is busy) and opens the **web UI** in your browser automatically.
 
-   > **⚠️ Note on CLI mode (Legacy):** The terminal CLI is a **deprecated version** of the tool, built before the development of the modern Web UI. While still functional, it requires a manual `.env` configuration. This file is **automatically generated** the first time you launch the Web UI. So, if you still wish to use the "old school" CLI, just run:
+   > **⚠️ Note on CLI mode (Legacy):** The terminal CLI is a **deprecated version** of the tool, built before the development of the Web UI. While still functional, it reads its API keys from a `.env` file, which the Web UI writes for you the first time you save a key on the **AI Settings** page (or you can create it yourself from `.env.example`). So, if you still wish to use the "old school" CLI, just run:
    >
    > ```bash
-   > pipenv run python -m app.main --cli
+   > pipenv run app-cli
    > ```
 
 ### Data Management
@@ -205,11 +210,11 @@ The tool can utilize API keys for enhanced functionality, but all are optional:
 | :--- | :--- | :--- |
 | **[![OpenFIGI](https://github.com/user-attachments/assets/4103d2d0-9317-4c99-a69f-51126e189c96)](https://www.openfigi.com/) [OpenFIGI](https://www.openfigi.com/)** | [CUSIP](https://en.wikipedia.org/wiki/CUSIP) → [stock ticker](https://en.wikipedia.org/wiki/Ticker_symbol) (Bloomberg's free identifier mapping). Works **without a key** at 25 req/min; a key raises the limit to 250 req/min. | [OpenFIGI Keys](https://www.openfigi.com/api/overview) |
 | **[![FMP](https://github.com/user-attachments/assets/603b12b2-c5cf-4669-8e9e-89f4e1d47d2a)](https://site.financialmodelingprep.com/) [Financial Modeling Prep](https://site.financialmodelingprep.com/)** | Reverse ticker → CUSIP lookup for Form 4 filings (free tier 250 req/day). **Key required** — without it the reverse lookup is skipped and unresolved tickers open a GitHub issue. | [FMP Keys](https://site.financialmodelingprep.com/developer/docs) |
-| **[![GitHub Models](https://github.com/user-attachments/assets/3e8ca2f8-1bb0-4ec3-9374-d6106499adde)](https://github.com/marketplace/models) [GitHub Models](https://github.com/marketplace/models)** | Access to top-tier models (e.g., [xAI Grok-3](https://x.ai/news/grok-3), [OpenAI GPT-5](https://openai.com/en-US/gpt-5/), etc...) | [GitHub Tokens](https://github.com/settings/personal-access-tokens/new?description=Used+to+call+GitHub+Models+APIs+to+easily+run+LLMs%3A+https%3A%2F%2Fdocs.github.com%2Fgithub-models%2Fquickstart%23step-2-make-an-api-call&name=GitHub+Models+token&user_models=read) |
+| **[![OpenRouter](https://github.com/user-attachments/assets/0aae7c70-d6ab-4166-8052-d4b9e06b9bb3)](https://openrouter.ai/) [OpenRouter](https://openrouter.ai/)** | Access to almost any LLMs | [OpenRouter Keys](https://openrouter.ai/settings/keys) |
 | **[![Google AI Studio](https://github.com/user-attachments/assets/3b351d8e-d7f6-4337-9c2f-d2af77f30711)](https://aistudio.google.com/) [Google AI Studio](https://aistudio.google.com/)** | Access to [Google Gemini](https://gemini.google.com/) models | [AI Studio Keys](https://aistudio.google.com/app/apikey) |
 | **[![Groq AI](https://github.com/user-attachments/assets/c56394b5-79f8-4c25-a24a-2e2a8bde829c)](https://console.groq.com/) [Groq AI](https://console.groq.com/)** | Access to various LLMs (e.g., OpenAI [gpt-oss](https://github.com/openai/gpt-oss), Meta [Llama](https://www.llama.com/), etc...) | [Groq Keys](https://console.groq.com/keys) |
-| **[![Hugging Face](https://github.com/user-attachments/assets/b4f22e8b-6c6e-4e28-91ca-e2bc9b89837f)](https://huggingface.co/) [Hugging Face](https://huggingface.co/)** | Access to open weights models (e.g., [DeepSeek R1](https://huggingface.co/deepseek-ai/DeepSeek-R1), [Kimi-Linear-48B](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct), etc...) | [HF Tokens](https://huggingface.co/settings/tokens) |
-| **[![OpenRouter](https://github.com/user-attachments/assets/0aae7c70-d6ab-4166-8052-d4b9e06b9bb3)](https://openrouter.ai/) [OpenRouter](https://openrouter.ai/)** | Access to various LLMs (e.g., [Claude 4.5 Opus](https://www.anthropic.com/news/claude-4-5-opus), [GLM 4.5 Air](https://chatglm.cn/), etc...) | [OpenRouter Keys](https://openrouter.ai/settings/keys) |
+| **[![Ollama Cloud](https://github.com/user-attachments/assets/a21cf3e3-eaac-4ef3-a8f6-3cc75b123a61)](https://ollama.com/) [Ollama Cloud](https://ollama.com/)** | Open-weight models hosted by Ollama (e.g., [Nemotron 3 Super](https://ollama.com/library/nemotron-3-super), [Gemma 4](https://ollama.com/library/gemma4)). | [Ollama Keys](https://ollama.com/settings/keys) |
+| **[![Z.AI](https://github.com/user-attachments/assets/c7ea5d72-7cf1-4424-9f26-41642f6f5dfe)](https://z.ai/) [Z.AI](https://z.ai/)** | GLM models. `GLM-4.7-Flash` and `GLM-4.5-Flash` are free. | [Z.AI Keys](https://z.ai/manage-apikey/apikey-list) |
 
 > **💡 Note — Ticker resolution:**
 >
@@ -221,30 +226,47 @@ The tool can utilize API keys for enhanced functionality, but all are optional:
 >
 > **Reverse path (ticker → CUSIP)** for Form 4 filings goes through [Financial Modeling Prep](https://site.financialmodelingprep.com/). The free `FMP_API_KEY` is **required** (250 req/day); without it, unresolved tickers open a GitHub issue and the CUSIP stays null until the next 13F cycle exposes it.
 >
-> **💡 Note:** You don't need to use all the APIs. For the generative AI models ([Google AI Studio](https://aistudio.google.com/), [GitHub Models](https://github.com/marketplace/models), [Groq AI](https://console.groq.com/), [Hugging Face](https://huggingface.co/models), and [OpenRouter](https://openrouter.ai/)), you only need the API keys for the services you plan to use.
-> For instance, if you want to experiment with models like [OpenAI](https://openai.com/) [GPT-4o mini](https://platform.openai.com/docs/models/gpt-4o-mini), you just need a [GitHub Token](https://github.com/settings/tokens). Experimenting with different models is encouraged, as the quality of AI-generated analysis, both for identifying promising stocks and for conducting due diligence, can vary. However, top-performing stocks are typically identified consistently across all tested models. **All APIs used in this project are currently free (with GitHub Models providing a generous free tier for developers).**
+> **💡 Note:** You don't need to use all the APIs. For the generative AI models ([OpenRouter](https://openrouter.ai/), [Google AI Studio](https://aistudio.google.com/), [Groq AI](https://console.groq.com/), [Ollama Cloud](https://ollama.com/), and [Z.AI](https://z.ai/)), you only need the API keys for the services you plan to use.
+> The default provider is [Google AI Studio](https://aistudio.google.com/), so a single free [AI Studio key](https://aistudio.google.com/app/apikey) is enough to get started. Experimenting with different models is encouraged, as the quality of AI-generated analysis, both for identifying promising stocks and for conducting due diligence, can vary. However, top-performing stocks are typically identified consistently across all tested models. **Every model in the bundled `database/models.csv` runs within its provider's free tier.**
+>
+> **Using other providers' models:** OpenRouter can call a provider with *your* key (BYOK, configured in your [OpenRouter integrations](https://openrouter.ai/integrations)); add the model to `database/models.csv` with `Client` set to `OpenRouter` and no code change is needed. OpenRouter bills 5% of the model's list price on top, from your OpenRouter credits.
 
 ## 📁 Project Structure
 
 ```plaintext
 hedge-fund-tracker/
 ├── 📁 .github/
+│   ├── 📁 ISSUE_TEMPLATE/           # Bug report + feature request forms
 │   ├── 📁 scripts/
-│   │   └── 🐍 fetcher.py           # Daily script for data fetching (scheduled by workflows/daily-fetch.yml)
+│   │   └── 🐍 fetcher.py           # Script for data fetching (scheduled by workflows/filings-fetch.yml)
 │   └── 📁 workflows/                # GitHub Actions for automation
+│       ├── ⚙️ dependabot-automerge.yml # GitHub Actions: Dependabot PR auto-merge
 │       ├── ⚙️ deploy-pages.yml     # GitHub Actions: Deploy to GitHub Pages
 │       ├── ⚙️ filings-fetch.yml    # GitHub Actions: Filings fetching job
-│       └── ⚙️ python-tests.yml     # GitHub Actions: Unit tests
+│       ├── ⚙️ lint.yml             # GitHub Actions: Lint + type-check
+│       ├── ⚙️ popularity-refresh.yml # GitHub Actions: Excluded-funds popularity ranking
+│       ├── ⚙️ refresh-badges.yml   # GitHub Actions: README badge refresh
+│       └── ⚙️ run-tests.yml        # GitHub Actions: Python + frontend tests
 ├── 📁 app/                          # Main application logic
+│   ├── 📁 ai/                       # LLM clients (OpenRouter, Google, Groq, Ollama, Z.AI) + analyst agent
+│   ├── 📁 analysis/                 # Portfolio, stock and performance analysis
+│   ├── 📁 api/                      # FastAPI routers (data, ai, sse, settings, admin, …)
+│   ├── 📁 auth/                     # Accounts, sessions and BYOK API-key storage
+│   ├── 📁 backtest/                 # Strategy Performance backtest engine
+│   ├── 📁 db/                       # SQLAlchemy models and session wiring
 │   ├── 📁 frontend/                 # React + Vite web UI
 │   │   ├── 📁 public/               # Static assets (404.html, logo + favicons)
 │   │   ├── 📁 scripts/              # copy-database.mjs (bundles CSVs for GH Pages)
 │   │   ├── 📁 src/
-│   │   │   ├── 📁 components/       # Shared UI components (ModelSelector, TerminalOutput, FeatureNotAvailable, etc.)
-│   │   │   ├── 📁 lib/              # config.ts (IS_GH_PAGES_MODE), dataService.ts (CSV I/O), aiClient.ts (SSE)
-│   │   │   └── 📁 pages/            # AIRanking, AIDueDiligence, FundsConfig, AISettings, DatabaseOperations
+│   │   │   ├── 📁 components/       # Shared UI components (AppSidebar, GlobalSearch, ModelSelector, TerminalOutput, …)
+│   │   │   ├── 📁 lib/              # config.ts (IS_GH_PAGES_MODE), dataService.ts (CSV I/O), aiClient.ts (SSE), routes.ts, menuDoors.ts
+│   │   │   └── 📁 pages/            # Landing, Dashboard, QuarterlyTrends, StrategyPerformance, FundPortfolio, StockBrowser, StockAnalysis, Learn, AIRanking, AIDueDiligence, FundsConfig, AISettings, DatabasePage
 │   │   ├── 📦 package.json
 │   │   └── ⚙️ vite.config.ts
+│   ├── 📁 scraper/                  # SEC EDGAR fetching and filing parsers
+│   ├── 📁 security/                 # Envelope encryption for stored secrets
+│   ├── 📁 stocks/                   # Ticker resolution + price fetching
+│   ├── 📁 utils/                    # Logging, console, GitHub issue alerts
 │   ├── 🐍 server.py                 # FastAPI server (serves frontend + all API endpoints)
 │   └── ▶️ main.py                  # Entry point: web server (default) or CLI (--cli)
 ├── 📁 database/                     # Data storage
@@ -253,17 +275,26 @@ hedge-fund-tracker/
 │   │   ├── 📊 fund_2.csv
 │   │   └── 📊 fund_n.csv
 │   ├── 📁 YYYYQN/
+│   ├── 📝 excluded_hedge_funds.csv # Funds deliberately not tracked (see Notable Exclusions)
 │   ├── 📝 hedge_funds.csv          # Curated hedge funds list -> EDIT THIS to add or remove funds to track
 │   ├── 📝 models.csv               # LLMs list to use for AI Financial Analyst -> EDIT THIS to add or remove AI models
 │   ├── 📊 non_quarterly.csv        # Stores latest 13D/G and Form 4 filings
+│   ├── 📊 performance.csv          # Backtested strategy equity curves
 │   ├── 📊 sector_hierarchy.csv     # Yahoo Finance sector → industry taxonomy
 │   ├── 📊 stocks.csv               # Master data for stocks (CUSIP-Ticker-Name-Sector-Industry)
 │   └── ▶️ updater.py               # Main entry point for updating the database
-├── 📁 tests/                        # Test suite
-├── 📝 .env.example                 # Template for your API keys
+├── 📁 docs/                         # Design notes and long-form documentation
+├── 📁 scripts/                      # Maintenance scripts (generate_secrets.py, regenerate_reports.py, …)
+├── 📁 tests/                        # Python test suite
+├── 📝 .env.example                 # Template for your API keys and secrets
 ├── ⛔ .gitignore                   # Git ignore rules
+├── ⚙️ alembic.ini                  # Database migration configuration
+├── 🐳 compose.yaml                 # App + Postgres services
+├── 🐳 Dockerfile                   # Multi-stage image (Node build → Python runtime)
+├── ▶️ entrypoint.sh                # Container start-up: seed data, write .env, run migrations
 ├── 🧾 LICENSE                      # Proprietary (code) + bundled MIT (original work)
 ├── 🧾 LICENSE-DOCS                 # CC BY 4.0 (Markdown documentation)
+├── 🧾 LICENSE-DATA                 # CC BY-NC 4.0 (database/ data files)
 ├── 🛠️ Pipfile                      # Project dependencies
 ├── 🔏 Pipfile.lock                 # Locked dependency versions
 └── 📖 README.md                    # Project documentation (this file)
@@ -283,9 +314,10 @@ This tracker leverages the following types of SEC filings to provide a comprehen
   - Shows **_portfolio snapshot_** on last day of quarter
 
 - **📝 Non-Quarterly 13D/G Filings**
-  - Required when acquiring 5%+ of company shares
-  - Filed **_within 10 days_** of the transaction
-  - Provides a **_timely view_** of significant investments
+  - Required when beneficially owning **_more than 5%_** of a class of registered voting shares
+  - Schedule 13D is filed **_within 5 business days_** of the acquisition (amendments within 2 business days)
+  - Schedule 13G varies: a passive investor files **_within 5 business days_**, but a Qualified Institutional Investor files **_45 days after quarter end_** — the same lag as a 13F
+  - Provides a **_timely view_** of significant investments, 13D most reliably so
 
 - **✍🏻 Non-Quarterly SEC Form 4 Insider Filings**
   - Filed by insiders (executives, directors) or large shareholders (>10%) when they trade company stocks
@@ -321,60 +353,60 @@ The quality of the output analysis is directly tied to the quality of the input 
 - _Bill Ackman_'s [Pershing Square](https://pershingsquareholdings.com/)
 - _Larry Fink_'s [BlackRock](https://www.blackrock.com/)
 - _Michael Burry_'s [Scion Asset Management](https://www.scionasset.com/)
-- _Ken Griffin_'s [Citadel Advisors](https://www.citadel.com/)
 - _Ray Dalio_'s [Bridgewater Associates](https://www.bridgewater.com/)
-- _Jim Simons_'s [Renaissance](https://www.rentec.com/)
 - _Steven Cohen_'s [Point72](https://point72.com/)
+- _Paul Marshall & Ian Wace_'s [Marshall Wace](https://www.mwam.com/)
 - _Carl Icahn_'s [Icahn Enterprises](https://www.ielp.com/)
 - _Abigail Johnson_'s [FMR](https://www.fidelity.com/)
-- _Bill Gates_'s [Gates Foundation Trust](https://www.gatesfoundation.org/about/financials/foundation-trust)
 - _John Paulson_'s [Paulson & Co.](https://paulsonco.com/)
-- _Paul Marshall & Ian Wace_'s [Marshall Wace](https://www.mwam.com/)
-- _Jan Koum_'s [Newlands](https://www.thenewlands.com/)
 - _Ben Horowitz_'s [a16z](https://a16z.com/)
 - _David Tepper_'s [Appaloosa](https://www.appaloosawm.com/)
-- _Robert Pitts_'s [Steadfast Capital Management](https://www.steadfast.com/)
+- _Jan Koum_'s [Newlands](https://www.thenewlands.com/)
+- _Bill Gates_'s [Gates Foundation Trust](https://www.gatesfoundation.org/about/financials/foundation-trust)
 - _Paul Tudor Jones_'s [Tudor Investment Corporation](https://www.tudorfunds.com/)
-- _David Lane_'s [Geode Capital Management](https://www.geodecapital.com/)
+- _Robert Pitts_'s [Steadfast Capital Management](https://www.steadfast.com/)
 - _Brad Gerstner_'s [Altimeter Capital Management](https://www.altimeter.com/)
+- _David Lane_'s [Geode Capital Management](https://www.geodecapital.com/)
 - _Chris Hohn_'s [The Children's Investment](https://ciff.org/)
-- _Tim Campbell_'s [Baillie Gifford](https://www.bailliegifford.com/)
-- _David Booth_'s [Dimensional Fund Advisors](https://www.dimensional.com/)
 - _Jeremy Grantham_'s [GMO](https://www.gmo.com/)
-- _Mohnish Pabrai_'s [Dalal Street](https://www.dalalstreetinvestments.com/)
-- _Israel Englander_'s [Millennium Management](https://www.mlp.com/)
+- _Tim Campbell_'s [Baillie Gifford](https://www.bailliegifford.com/)
 - _Robert Granieri_'s [Jane Street](https://www.janestreet.com/)
+- _Israel Englander_'s [Millennium Management](https://www.mlp.com/)
+- _John Overdeck_'s [Two Sigma](https://www.twosigma.com/)
+- _Mohnish Pabrai_'s [Dalal Street](https://www.dalalstreetinvestments.com/)
 - _David Shaw_'s [DE Shaw](https://www.deshaw.com/)
-- _Li Lu_'s [Himalaya Capital Management](https://www.himcap.com/)
 - _Cliff Asness_'s [AQR Capital Management](https://www.aqr.com/)
+- _Li Lu_'s [Himalaya Capital Management](https://www.himcap.com/)
+- _Philippe Laffont_'s [Coatue](https://www.coatue.com/)
 - _Ashish Sharma_'s [DGS Capital Management](https://www.dgs.capital/)
 - _Daniel Loeb_'s [Third Point](https://www.thirdpoint.com/)
 - _Dmitry Balyasny_'s [Balyasny Asset Management](https://www.bamfunds.com/)
 - _Pierre-Yves Morlat_'s [Qube Research & Technologies](https://www.qube-rt.com/)
-- _Ken Fisher_'s [Fisher Asset Management](https://www.fisherinvestments.com/)
-- _William Huffman_'s [Nuveen](https://www.nuveen.com/)
-- _Chase Coleman_'s [Tiger Global](https://www.tigerglobal.com/)
 - _Joel Greenblatt_'s [Gotham Funds](https://www.gothamfunds.com/)
+- _Ken Fisher_'s [Fisher Asset Management](https://www.fisherinvestments.com/)
+- _David Booth_'s [Dimensional Fund Advisors](https://www.dimensional.com/)
+- _Chase Coleman_'s [Tiger Global](https://www.tigerglobal.com/)
 - _Ali Dibadj_'s [Janus Henderson Investors](https://www.janushenderson.com/)
 - _Robert Citrone_'s [Discovery Capital Management](https://discoverycapitalmanagement.com/)
-- _Philippe Laffont_'s [Coatue](https://www.coatue.com/)
-- _John Overdeck_'s [Two Sigma](https://www.twosigma.com/)
+- _Boaz Weinstein_'s [Saba Capital](https://www.sabacapital.com/)
+- _Paul Singer_'s [Elliott Investment](https://www.elliottmgmt.com/)
+- _Richard Walker_'s [Crake Asset Management](https://crakeam.com/)
+- _Steve Mandel_'s [Lone Pine Capital](https://www.lonepinecapital.com/)
 - _Mario Gabelli_'s [GAMCO Investors](https://gabelli.com/)
 - _Steven Schonfeld_'s [Schonfeld Strategic Advisors](https://www.schonfeld.com/)
 - _Sander Gerber_'s [Hudson Bay Capital Management](https://www.hudsonbaycapital.com/)
-- _Richard Walker_'s [Crake Asset Management](https://crakeam.com/)
-- _James O'Shaughnessy_'s [O'Shaughnessy Asset Management](https://www.osam.com/)
+- _Gregory Fleming_'s [Rockefeller Capital Management](https://www.rockco.com/)
 - _Herbert Allen III_'s [Allen Operations](https://www.allenandcompany.net/)
-- _Lee Ainslie_'s [Maverick Capital](https://www.maverickcap.com/)
 - _Barry Ritholtz_'s [Ritholtz Wealth Management](https://www.ritholtzwealth.com/)
-- _Mark Moore_'s [ThornTree Capital](https://www.thorntreecap.com/)
-- _Paul Singer_'s [Elliott Investment](https://www.elliottmgmt.com/)
+- _Lee Ainslie_'s [Maverick Capital](https://www.maverickcap.com/)
 - _Edward Mule_'s [Silver Point Capital](https://www.silverpointcapital.com/)
 - _Paul Thwaite_'s [NatWest Group](https://www.natwestgroup.com/)
+- _Tianqiao Chen_'s [Shanda](https://www.shanda.com/)
 - _Jorge Paulo Lehman_'s [3G Capital](https://www.3g-capital.com/)
 - _Dominique Ceolin_'s [ABC Arbitrage](https://www.abc-arbitrage.com/)
 - _David Abrams_'s [Abrams Capital Management](https://www.abramscapital.com/)
 - _José Zitelmann_'s [Absoluto Partners](https://www.absolutopartners.com/)
+- _Richard Lin_'s [Acuta Capital Partners](https://www.acutacapital.com/)
 - and many more... (see [`database/excluded_hedge_funds.csv`](/database/excluded_hedge_funds.csv) for the full list)
 <!-- EXCLUDED_FUNDS_LIST_END -->
 
@@ -411,7 +443,7 @@ Want to track additional funds? Simply edit `database/hedge_funds.csv` and add y
 
 ## 🧠 AI Models Selection
 
-The **AI Financial Analyst**'s primary goal is to identify stocks with the highest growth potential based on hedge fund activity. It achieves this by calculating a **"Promise Score"** for each stock. This score is a weighted average of various metrics derived from 13F filings. The AI's first critical task is to act as a strategist, dynamically defining the heuristic by assigning the optimal weights for these metrics based on the market conditions of the selected quarter. Its second task is to provide quantitative scores (e.g., momentum, risk) for the top-ranked stocks.
+The **AI Financial Analyst** ranks stocks by **"Promise Score"**, a score a language model produces from the institutional filing data on this site: how many tracked funds hold a stock, how large those positions are, and how they changed over recent quarters. It runs in two steps — the model first proposes how much weight to give each of those inputs for the selected quarter, then scores every stock using those weights. It is a ranking of filing activity, not a forecast of returns.
 
 The models included in `database/models.csv` have been selected because they have demonstrated the best performance and reliability for these specific tasks. Through experimentation, they have proven effective at interpreting the prompts and providing insightful, well-structured responses.
 
@@ -423,15 +455,16 @@ To add a new model, open `database/models.csv` and add a new row with the follow
 
 - **ID**: The specific model identifier as required by the provider's API.
 - **Description**: A brief, user-friendly description that will be displayed in the selection menu.
-- **Client**: The provider of the model. Must be one of `GitHub`, `Google`, `Groq`, `HuggingFace`, or `OpenRouter`.
+- **Client**: The provider of the model. Must be one of `Google`, `Groq`, `Ollama`, `OpenRouter`, or `ZAI`.
 
 Here are the official model lists for each provider:
 
-- [GitHub Models](https://github.com/marketplace/models)
+
+- [OpenRouter Free Models](https://openrouter.ai/models?order=newest&output_modalities=text)
 - [Google Gemini Models](https://ai.google.dev/gemini-api/docs/models)
 - [Groq Models](https://console.groq.com/docs/models)
-- [HuggingFace Models](https://huggingface.co/models)
-- [OpenRouter Free Models](https://openrouter.ai/models?order=newest&max_price=0)
+- [Ollama Cloud Models](https://ollama.com/search?c=cloud)
+- [Z.AI Models](https://docs.z.ai/guides/overview/pricing)
 
 ## ⚠️ Limitations & Considerations
 
@@ -457,14 +490,25 @@ You can run the full application in Docker — no Python or Node.js installation
 ### What Docker Provides
 
 - **Multi-stage build**: frontend compiled in Node, served by Python — single optimized image
+- **Postgres service**: a `postgres:18-alpine` container on a `pgdata` volume, published on loopback only; Alembic migrations run at start-up from `entrypoint.sh`
 - **Persistent data**: `database/`, `__llmcache__/`, and `__reports__/` are mounted as volumes
 - **Health check**: `/health` endpoint monitored by Docker
 - **Non-root user**: runs as `hedgefund` user inside the container
 - **API keys**: read from mounted `.env` file or passed as environment variables
 
-### Cloud Deployment
+### Planned: Public Cloud Deployment
 
-The Docker setup works with any container platform (Railway, Fly.io, Render, etc.). Set `DOCKER_ENV=1` and pass API keys as environment variables. The `entrypoint.sh` script automatically seeds the database and generates `.env` from environment variables on first deploy.
+This is a roadmap item, not a supported configuration. The current release is meant for local or private-network use only; see [SECURITY.md](SECURITY.md) for the supported security posture.
+
+The experimental authentication and Postgres stack in this repository is groundwork for a future hosted mode.
+
+The container itself already carries the pieces a hosted deployment would build on: setting `DOCKER_ENV=1` selects the containerized configuration, API keys are passed as environment variables, and `entrypoint.sh` seeds the database and generates `.env` from those environment variables on first start.
+
+Before public deployment can be supported, the next step will need:
+
+- **Postgres reachable over `DATABASE_URL`** instead of the bundled loopback-only container
+- **The four secrets produced by `scripts/generate_secrets.py`** (`MASTER_KEY`, `MASTER_KEY_VERSION`, `RESET_PASSWORD_TOKEN_SECRET`, `VERIFICATION_TOKEN_SECRET`) supplied by the platform's secret store
+- **HTTPS terminated in front of the application**, since the app serves plain HTTP inside the container
 
 ## 🌐 GitHub Pages Deployment
 
@@ -476,16 +520,17 @@ The frontend can be deployed as a **static demo on GitHub Pages** — no Python 
 
 | Page | Status |
 | :--- | :--- |
-| Dashboard (Latest Filings) | Fully functional |
-| Quarterly Trends | Fully functional |
-| Hedge Fund Portfolios | Fully functional |
-| Stocks Browser | Fully functional |
+| Latest Filings (`/latest`) | Fully functional |
+| Quarterly Trends (`/quarterly`) | Fully functional |
+| Strategy Performance (`/performance`) | Fully functional |
+| Fund Portfolios (`/funds`) | Fully functional |
+| Stocks (`/stocks`, `/stock/:ticker`) | Fully functional |
 | FAQ (`/learn`) | Fully functional (statically pre-rendered for SEO) |
-| AI Ranking | Disabled (requires local backend) |
-| AI Due Diligence | Disabled (requires local backend) |
-| Funds Config | Hidden |
-| AI Settings | Hidden |
-| Database Operations | Hidden |
+| Most Promising Stocks (`/ai-ranking`) | Disabled (requires local backend) |
+| Stock Due Diligence (`/ai-diligence`) | Disabled (requires local backend) |
+| Funds Configuration (`/funds-config`) | Hidden (Admin section not rendered) |
+| AI Settings (`/ai-settings`) | Hidden (Admin section not rendered) |
+| Update Operations (`/database`) | Hidden (Admin section not rendered) |
 
 ### How to Deploy
 
@@ -521,14 +566,15 @@ This repository includes a [GitHub Actions](https://github.com/features/actions)
 
 1. **Fork the Repository**: Create your own [fork of this project](https://github.com/dokson/hedge-fund-tracker/fork) on GitHub.
 2. **Enable Actions**: GitHub Actions are typically enabled by default on forked repositories. You can verify this under the _Actions_ tab of your fork.
-3. **Configure Secrets (optional)**: Workflows run with the built-in `GITHUB_TOKEN` and require no extra setup. If you want a higher OpenFIGI rate limit during ticker resolution (250 req/min vs 25), add `OPENFIGI_API_KEY` as a repository secret under `Settings` > `Secrets and variables` > `Actions`.
+3. **Configure Secrets (optional)**: Workflows run with the `GITHUB_TOKEN` that GitHub Actions provides automatically (it is not a personal key you create) and require no extra setup. If you want a higher OpenFIGI rate limit during ticker resolution (250 req/min vs 25), add `OPENFIGI_API_KEY` as a repository secret under `Settings` > `Secrets and variables` > `Actions`.
 
 ## 🗃️ Technical Stack
 
 | 🗂️ Category | 🦾 Technology |
 | :--- | :--- |
-| **Core** | [Python 3.13](https://www.python.org/downloads/release/python-3130/)+, [pipenv](https://pipenv.pypa.io/), [Docker](https://www.docker.com/) (optional) |
+| **Core** | [Python 3.14](https://www.python.org/downloads/release/python-3140/)+, [pipenv](https://pipenv.pypa.io/), [Docker](https://www.docker.com/) (optional) |
 | **Backend** | [FastAPI](https://fastapi.tiangolo.com/), [uvicorn](https://www.uvicorn.org/) |
+| **Persistence & Accounts** | [PostgreSQL](https://www.postgresql.org/), [SQLAlchemy](https://www.sqlalchemy.org/), [Alembic](https://alembic.sqlalchemy.org/), [FastAPI Users](https://fastapi-users.github.io/fastapi-users/), [cryptography](https://cryptography.io/) (envelope encryption for stored keys) |
 | **Frontend** | [React 19](https://react.dev/), [Vite](https://vitejs.dev/), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/) |
 | **UI Components** | [shadcn/ui](https://ui.shadcn.com/), [Radix UI](https://www.radix-ui.com/), [Lucide](https://lucide.dev/), [Sonner](https://sonner.emilkowal.ski/) |
 | **Data Viz & State** | [Recharts](https://recharts.github.io/), [TanStack Query v5](https://tanstack.com/query/latest) |
@@ -536,8 +582,8 @@ This repository includes a [GitHub Actions](https://github.com/features/actions)
 | **Reliability** | [Tenacity](https://github.com/jd/tenacity), [Python-Dotenv](https://github.com/theskumar/python-dotenv) |
 | **Stocks Data** | [yfinance](https://github.com/ranaroussi/yfinance), [OpenFIGI](https://www.openfigi.com/), [TradingView](https://www.tradingview.com/), [Financial Modeling Prep](https://site.financialmodelingprep.com/), [Nasdaq API](https://www.nasdaq.com/) |
 | **Gen AI** | [toon-format](https://github.com/toon-format/toon-python), [Google AI SDK](https://googleapis.github.io/python-genai/), [OpenAI SDK](https://github.com/openai/openai-python) |
-| **Code Quality (Python)** | [Ruff](https://docs.astral.sh/ruff/) (lint + format), [mypy](https://mypy.readthedocs.io/) (type-check), [pre-commit](https://pre-commit.com/) |
-| **Code Quality (Frontend)** | [oxlint](https://oxc.rs/docs/guide/usage/linter) (React, JSX-a11y, TypeScript rules), [Prettier](https://prettier.io/), [TypeScript strict](https://www.typescriptlang.org/) |
+| **Code Quality (Python)** | [Ruff](https://docs.astral.sh/ruff/) (lint + format), [Pyright](https://github.com/microsoft/pyright) (type-check), [pre-commit](https://pre-commit.com/) |
+| **Code Quality (Frontend)** | [oxlint](https://oxc.rs/docs/guide/usage/linter) (React, JSX-a11y, TypeScript rules), [oxfmt](https://oxc.rs/docs/guide/usage/formatter), [TypeScript strict](https://www.typescriptlang.org/) |
 | **CI/CD** | [GitHub Actions](https://docs.github.com/actions) (lint, tests, deploy), [Vitest](https://vitest.dev/) (frontend tests), `unittest` (Python tests) |
 
 ## 🤝🏼 Contributing & Support
@@ -570,14 +616,15 @@ This project began as a fork of [sec-web-scraper-13f](https://github.com/CodeWri
 
 ## 📄 License
 
-This repository is **dual-licensed**, with documentation carved out separately:
+This repository is licensed in parts, with documentation and data carved out separately:
 
 - **Original work** (Gary Pang's [sec-web-scraper-13f](https://github.com/CodeWritingCow/sec-web-scraper-13f)): MIT License.
 - **All new code** (everything added by Alessandro Colace): Copyright © 2025 Alessandro Colace — All Rights Reserved. Personal and educational use is permitted; redistribution and commercial use require written permission.
 - **Markdown documentation** (`*.md` files): [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) — reuse with attribution to Alessandro Colace ([github.com/dokson/hedge-fund-tracker](https://github.com/dokson/hedge-fund-tracker)). Each `.md` file carries an `SPDX-License-Identifier: CC-BY-4.0` header.
+- **Data** (the files under `database/`, also served by the site under `/database/`): [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) — non-commercial reuse with attribution to Hedge Fund Tracker; commercial use requires written permission. The underlying SEC filings remain public records.
 
-See [LICENSE](LICENSE) for the code terms and [LICENSE-DOCS](LICENSE-DOCS) for the documentation terms.
+See [LICENSE](LICENSE) for the code terms, [LICENSE-DOCS](LICENSE-DOCS) for the documentation terms and [LICENSE-DATA](LICENSE-DATA) for the data terms.
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=dokson/hedge-fund-tracker&type=date&legend=top-left&sealed_token=0KV9GWxIUSvM8AmXhsEoRw0bTbOC9tdRmhfAZskDt2TIIcq0Z2CztCb8v_GWCwWhFdqRCU4aUmFbI82raH7Lrh24xNy8Q63KxIAF5ZP_gLm3dROs3hp6lw)](https://www.star-history.com/?repos=dokson%2Fhedge-fund-tracker&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=dokson/hedge-fund-tracker&type=date&legend=top-left&sealed_token=dqTXN4B3LWovd2SJfo30GipOWQUoD7w3lGvoLP6zNglSBenlZ2wDIYf_rP64xY9FLp9MTL5WAUv2v78wm4bk1gW6RJwEEGil0t4CmC1GHCN-Qm1Mdlm4Dw)](https://www.star-history.com/?repos=dokson%2Fhedge-fund-tracker&type=date&legend=top-left)

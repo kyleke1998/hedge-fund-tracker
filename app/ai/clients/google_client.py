@@ -1,44 +1,90 @@
+import re
+import time
 from typing import ClassVar
 
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.ai.clients import AIClient
+from app.ai.clients.base_client import ReasoningLevel, StructuredMode, llm_retry_hook
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Mirrors DEFAULT_REASONING_EFFORT in base_openai_client.py: a bounded thinking
-# budget for reasoning-capable Gemini models, so short structured prompts
-# don't burn output tokens on hidden chain-of-thought.
-DEFAULT_THINKING_LEVEL = types.ThinkingLevel.LOW
+_THINKING_LEVELS: dict[str, types.ThinkingLevel] = {
+    "low": types.ThinkingLevel.LOW,
+    "medium": types.ThinkingLevel.MEDIUM,
+    "high": types.ThinkingLevel.HIGH,
+}
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """
+    Whether a Gemini call failure is worth retrying: a 5xx, a 429 or a transport failure.
+    """
+    if isinstance(exc, (ServerError, httpx.TransportError, TimeoutError, ConnectionError)):
+        return True
+    return isinstance(exc, ClientError) and exc.code == 429
+
+
+def _warrants_fallback(exc: ServerError | ClientError | httpx.TimeoutException) -> bool:
+    """
+    Whether a primary-model failure should switch to FALLBACK_MODEL: a 503 overload, a 429, or a
+    stall past the request timeout (an overloaded model may hold the stream open without a byte).
+    """
+    if isinstance(exc, httpx.TimeoutException):
+        return True
+    if isinstance(exc, ClientError):
+        return exc.code == 429
+    return "unavailable" in str(exc).lower()
+
+
+# A 429 that returns in seconds is the per-minute limit; one that returns in hours is the daily one.
+_DAILY_QUOTA_MIN_RESET_S = 600.0
+_RETRY_IN_RE = re.compile(r"retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?")
+
+
+def _quota_returns_in(exc: BaseException) -> float | None:
+    """
+    Seconds until a 429's quota comes back, read from its "Please retry in 9h2m2.39s" text,
+    or None when the error is not a 429 or names no delay.
+    """
+    if not isinstance(exc, ClientError) or exc.code != 429:
+        return None
+    match = _RETRY_IN_RE.search(str(exc))
+    if match is None or not any(match.groups()):
+        return None
+    hours, minutes, seconds = (float(part or 0) for part in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
 
 
 class GoogleAIClient(AIClient):
     """
-    Google AI client implementation using Gemini models (e.g., Gemini 2.5)
+    Google AI client implementation for Gemini models.
     """
 
-    DEFAULT_MODEL = "gemini-2.5-flash"
+    DEFAULT_MODEL = "gemini-3.8-flash"
 
     # Model to switch to, within the same call, when the primary model is
-    # overloaded (503 UNAVAILABLE) — "high demand" spikes are usually
-    # temporary but can outlast the outer retry's backoff window.
-    FALLBACK_MODEL: ClassVar[str] = "gemini-3.1-flash-lite"
+    # overloaded (503 UNAVAILABLE), rate-limited (429) or silent past the timeout:
+    # the free tier's per-minute quota and "high demand" spikes outlast the retry backoff.
+    FALLBACK_MODEL: ClassVar[str] = "gemini-3.5-flash-lite"
 
-    # Model names that have already rejected thinking_config, so repeat calls
-    # to a known non-thinking model skip the failing round trip.
-    _thinking_unsupported: ClassVar[set[str]] = set()
+    SUPPORTED_STRUCTURED_MODES: ClassVar[tuple[StructuredMode, ...]] = ("schema", "json", "prompt")
+
+    # (key scope, model) -> monotonic time until which a spent daily quota blocks the model.
+    _quota_exhausted_until: ClassVar[dict[tuple[str, str], float]] = {}
 
     def __init__(self, model: str = DEFAULT_MODEL, api_key: str | None = None):
         """
         Initialise the Google AI client.
 
         Args:
-            model: model name (default 'gemini-2.5-flash').
+            model: model name (default DEFAULT_MODEL).
             api_key: explicit API key. When None, falls back to GOOGLE_API_KEY
                 env var via genai.Client default — DEPRECATED, will be required
                 explicitly once BYOK is wired end-to-end.
@@ -52,6 +98,8 @@ class GoogleAIClient(AIClient):
         else:
             self.client = genai.Client(api_key=api_key, http_options=http_options)
         self.model = model
+        self._answered_by: str | None = None
+        self._quota_scope = api_key or "env"
 
     def get_model_name(self) -> str:
         """
@@ -59,19 +107,34 @@ class GoogleAIClient(AIClient):
         """
         return f"google/{self.model}"
 
+    def _answering_model_name(self) -> str:
+        """
+        Names the model that actually answered, which is FALLBACK_MODEL after an overload.
+        """
+        return f"google/{self._answered_by or self.model}"
+
     @retry(
         wait=wait_exponential(multiplier=2, min=1, max=8),
         stop=stop_after_attempt(3),
-        before_sleep=lambda rs: logger.progress(
-            f"Google AI service unavailable, retrying in {rs.next_action.sleep:.2f}s... (Attempt #{rs.attempt_number})"  # type: ignore[union-attr]
+        retry=retry_if_exception(_is_transient),
+        before_sleep=llm_retry_hook(
+            "Google AI service unavailable, retrying in %.2fs... (Attempt #%d)"
         ),
     )
-    def _generate_content_impl(self, prompt: str, **kwargs) -> str:
+    def _generate_content_impl(
+        self,
+        prompt: str,
+        reasoning: ReasoningLevel | None = None,
+        response_schema: dict | None = None,
+        **kwargs,
+    ) -> str:
         """
         Generate content using Google AI Gemini API
 
         Args:
             prompt: The input prompt for content generation
+            reasoning: thinking level (None = the shared default)
+            response_schema: JSON Schema for the answer (None = plain text)
 
         Returns:
             Generated content as string
@@ -79,55 +142,117 @@ class GoogleAIClient(AIClient):
         Raises:
             Exception: If the Google AI API call fails after retries
         """
+        self._answered_by = self.model
         try:
-            try:
-                return self._generate_with_thinking_fallback(prompt, self.model)
-            except ServerError as exc:
-                if self.model == self.FALLBACK_MODEL or "unavailable" not in str(exc).lower():
-                    raise
+            if self.model != self.FALLBACK_MODEL and self._quota_spent():
                 logger.warning(
-                    "GoogleAIClient: %s is overloaded (%s), falling back to %s",
+                    "GoogleAIClient: %s has no quota left today, using %s",
+                    self.model,
+                    self.FALLBACK_MODEL,
+                )
+                return self._generate_on_fallback(prompt, reasoning, response_schema)
+            try:
+                return self._generate_on(prompt, self.model, reasoning, response_schema)
+            except (ServerError, ClientError, httpx.TimeoutException) as exc:
+                if self.model == self.FALLBACK_MODEL or not _warrants_fallback(exc):
+                    raise
+                reset_in = _quota_returns_in(exc)
+                if reset_in is not None and reset_in >= _DAILY_QUOTA_MIN_RESET_S:
+                    self._quota_exhausted_until[(self._quota_scope, self.model)] = (
+                        time.monotonic() + reset_in
+                    )
+                logger.warning(
+                    "GoogleAIClient: %s is overloaded, rate-limited or not answering (%s), "
+                    "falling back to %s",
                     self.model,
                     exc,
                     self.FALLBACK_MODEL,
                 )
-                result = self._generate_with_thinking_fallback(prompt, self.FALLBACK_MODEL)
-                self.model = self.FALLBACK_MODEL
-                return result
+                return self._generate_on_fallback(prompt, reasoning, response_schema)
         except Exception:
             logger.error("Google AI API call failed", exc_info=True)
             raise
 
-    def _generate_with_thinking_fallback(self, prompt: str, model: str) -> str:
+    def _quota_spent(self) -> bool:
         """
-        Generates content on ``model``, retrying once without thinking_config
-        if the model rejects it.
+        Whether a 429 recently said this model's quota stays spent for hours.
         """
-        try:
-            return self._generate_once(prompt, model, with_thinking_config=True)
-        except ClientError as exc:
-            if model in self._thinking_unsupported or "thinking" not in str(exc).lower():
-                raise
-            logger.warning(
-                "GoogleAIClient: %s does not support thinking_config, retrying without it",
+        until = self._quota_exhausted_until.get((self._quota_scope, self.model))
+        return until is not None and time.monotonic() < until
+
+    def _generate_on_fallback(
+        self, prompt: str, reasoning: ReasoningLevel | None, schema: dict | None
+    ) -> str:
+        """
+        Answers on FALLBACK_MODEL and records it as the model that answered.
+        """
+        self._answered_by = self.FALLBACK_MODEL
+        return self._generate_on(prompt, self.FALLBACK_MODEL, reasoning, schema)
+
+    def _generate_on(
+        self,
+        prompt: str,
+        model: str,
+        reasoning: ReasoningLevel | None,
+        schema: dict | None = None,
+    ) -> str:
+        """
+        Generates on ``model`` through the shared structured-output and reasoning flows.
+        """
+
+        def _send(mode_prompt: str, mode: StructuredMode | None) -> str:
+            """
+            Sends one request in ``mode`` through the reasoning fallback.
+            """
+            return self._generate_with_reasoning(
                 model,
-            )
-            self._thinking_unsupported.add(model)
-            return self._generate_once(prompt, model, with_thinking_config=False)
-
-    def _generate_once(self, prompt: str, model: str, with_thinking_config: bool) -> str:
-        """
-        Sends one generate_content request, optionally with a bounded
-        thinking_config, and returns the response text.
-        """
-        config = None
-        if with_thinking_config and model not in self._thinking_unsupported:
-            config = types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_level=DEFAULT_THINKING_LEVEL)
+                reasoning,
+                lambda level: self._generate_once(mode_prompt, model, level, mode, schema),
             )
 
-        request_kwargs = {"config": config} if config is not None else {}
-        response = self.client.models.generate_content(
-            model=model, contents=prompt, **request_kwargs
+        return self._generate_with_structure(model, prompt, schema, _send)
+
+    def _is_structured_output_rejected(self, exc: BaseException) -> bool:
+        """
+        Gemini rejects an unsupported JSON mode or schema with a 400 naming the field.
+        """
+        if not isinstance(exc, ClientError) or exc.code != 400:
+            return False
+        message = str(exc).lower()
+        markers = ("response_json_schema", "response_schema", "response_mime_type", "json mode")
+        return any(marker in message for marker in markers)
+
+    def _is_reasoning_rejected(self, exc: BaseException) -> bool:
+        """
+        Gemini rejects thinking_config on non-thinking models with a 4xx naming it.
+        """
+        return isinstance(exc, ClientError) and "thinking" in str(exc).lower()
+
+    def _generate_once(
+        self,
+        prompt: str,
+        model: str,
+        level: ReasoningLevel | None,
+        mode: StructuredMode | None = None,
+        schema: dict | None = None,
+    ) -> str:
+        """
+        Sends one request (with a thinking level unless ``level`` is None, and JSON output per
+        ``mode``) and returns its text. Not streamed: the answer is only used whole, and a
+        non-streamed call returns an overloaded model's 503 at once, where a stream can sit
+        silent until the request timeout.
+        """
+        # No tools are ever passed, but google-genai >= 2.21 warns on every
+        # generate_content call unless AFC is disabled explicitly.
+        config = types.GenerateContentConfig(
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
         )
+        if level is not None:
+            config.thinking_config = types.ThinkingConfig(thinking_level=_THINKING_LEVELS[level])
+        if mode in ("schema", "json"):
+            config.response_mime_type = "application/json"
+        if mode == "schema":
+            config.response_json_schema = schema
+
+        response = self.client.models.generate_content(model=model, contents=prompt, config=config)
         return response.text or ""

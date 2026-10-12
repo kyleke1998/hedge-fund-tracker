@@ -1,9 +1,5 @@
 {
-  "include": [
-    "app",
-    "database",
-    "tests"
-  ],
+  "include": ["app", "database", "tests"],
   "exclude": [
     "**/__llmcache__",
     "**/__reports__",
@@ -13,7 +9,7 @@
     "**/node_modules",
     "app/frontend"
   ],
-  "pythonVersion": "3.13",
+  "pythonVersion": "3.14",
   "typeCheckingMode": "basic",
   "useLibraryCodeForTypes": true,
   "reportMissingImports": "error",
@@ -24,9 +20,7 @@
   "executionEnvironments": [
     {
       "root": "tests",
-      "extraPaths": [
-        "."
-      ],
+      "extraPaths": ["."],
       "reportOptionalSubscript": "none",
       "reportOptionalMemberAccess": "none"
     }

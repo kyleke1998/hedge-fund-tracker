@@ -2,11 +2,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "^Bash$",
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/scripts/enforce_pipenv.py\"",
+            "command": "python \"$(git rev-parse --show-toplevel)/.agents/hooks/enforce_pipenv.py\" --format codex",
             "timeout": 5
           }
         ]

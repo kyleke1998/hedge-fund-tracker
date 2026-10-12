@@ -1,128 +1,147 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
-
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
 @layer base {
+  /* Light: white page and white panels told apart by hairlines and a faint
+     lift, neutral zinc greys, one indigo. Values are HSL triples so every
+     hsl(var(--x)) consumer keeps working. */
   :root {
-    --background: 220 14% 96%;
-    --foreground: 220 15% 15%;
+    --background: 0 0% 100%;
+    --foreground: 240 6% 10%; /* #18181b, 17.7:1 */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
+    --card-foreground: 240 6% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
+    --popover-foreground: 240 6% 10%;
 
-    --primary: 217 85% 48%;
+    --primary: 243 75% 59%; /* #5048e5, 6.18:1 with white */
     --primary-foreground: 0 0% 100%;
+    --primary-text: 243 75% 52%; /* link text: muted 7.57, card/bg 8.30 */
 
-    --secondary: 220 10% 93%;
-    --secondary-foreground: 220 15% 25%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
 
-    --muted: 220 10% 94%;
-    --muted-foreground: 220 10% 38%;
+    --muted: 240 5% 96%; /* #f4f4f5, hover / track surface */
+    /* #67676f: labels go down to 11px, so the muted tone carries the AA bar
+       on every surface. muted 5.12, card/bg 5.62. */
+    --muted-foreground: 240 4% 42%;
 
-    --accent: 217 85% 48%;
+    --accent: 243 75% 59%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 42%;
+    --destructive: 355 74% 44%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 80%;
-    --input: 220 10% 72%;
-    --ring: 217 85% 48%;
+    --border: 240 6% 90%; /* #e4e4e7 */
+    --input: 240 5% 84%;
+    --ring: 243 75% 59%;
 
-    --radius: 0.625rem;
+    --radius: 8px;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 10% 40%;
-    --sidebar-primary: 217 85% 48%;
+    --sidebar-foreground: 240 4% 42%; /* mirrors --muted-foreground */
+    --sidebar-primary: 243 75% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 94%;
-    --sidebar-accent-foreground: 220 15% 15%;
-    --sidebar-border: 220 10% 90%;
-    --sidebar-ring: 217 85% 48%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 243 75% 59%;
 
-    /* Custom semantic tokens — light theme contrasts on white card / #f1f3f5 bg */
-    --positive: 142 71% 28%; /* #14803a → 6.6:1 on white */
+    /* Deltas are darkened off the canon greens/reds, which sit near 3.3:1
+       on white. Every ratio below is measured on --muted (#f4f4f5), the
+       darkest ground a delta, a chip or a hover row reaches in this theme,
+       so it holds on --card and --background too. */
+    --positive: 171 92% 24%; /* #057665: muted 5.09, bg 5.58 */
     --positive-foreground: 0 0% 100%;
-    --negative: 0 72% 42%; /* #ba1b1b → 6.3:1 on white */
+    --negative: 355 74% 44%; /* #c31d2b: muted 5.41, bg 5.93 */
     --negative-foreground: 0 0% 100%;
-    --closed: 0 75% 30%; /* deep blood red — distinct from --negative */
-    --warning: 32 95% 32%; /* #a05607 → 5.8:1 on white */
+    --closed: 355 74% 44%;
+    --warning: 36 100% 30%; /* #995c00: muted 4.94, bg 5.41 */
     --warning-foreground: 0 0% 100%;
-    --info: 217 85% 42%; /* #1259c6 → 5.9:1 on white */
+    --info: 243 75% 59%;
+    --magenta: 282 68% 38%; /* #7b1fa3, AI: muted 7.45, bg 8.17 */
 
-    --chart-1: 217 75% 50%;
-    --chart-2: 156 52% 38%;
-    --chart-3: 0 68% 52%;
-    --chart-4: 38 80% 46%;
-    --chart-5: 265 48% 56%;
-
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(220 10% 98%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(217 85% 48%) 0%, hsl(230 75% 45%) 100%);
-    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.06), 0 1px 2px -1px hsl(0 0% 0% / 0.06);
-    --shadow-glow: 0 0 15px -5px hsl(217 85% 48% / 0.1);
+    --chart-1: 243 75% 59%;
+    --chart-2: 171 92% 24%;
+    --chart-3: 36 100% 30%;
+    --chart-4: 282 68% 38%;
+    --chart-5: 187 100% 32%;
+    /* Two more sector hues, so Industrials and ETF stop borrowing a neutral.
+       A chart mark needs 3:1 (SC 1.4.11); both clear it on every ground. */
+    --chart-6: 80 95% 26%; /* #578103: muted 4.3, bg 4.62 */
+    --chart-7: 140 85% 28%; /* #0b8433: muted 4.4, bg 4.81 */
+    --chart-8: 46 100% 30%; /* #997300, Smart Score yellow: bg 4.6 */
   }
 
+  /* Dark is the default look: an ink-indigo page, one step lighter panel,
+     hairlines tinted to the brand hue, indigo for primary and selection.
+     The neutrals carry 14-30% saturation at hue 236, so the page reads as
+     the product's colour instead of zinc grey; every text token below keeps
+     or beats the ratio it had on zinc. */
   .dark {
-    --background: 220 20% 7%;
-    --foreground: 210 20% 95%;
+    --background: 236 28% 5%; /* #090a10 */
+    --foreground: 230 30% 94%; /* #ebedf4, 16.9:1 */
 
-    --card: 220 18% 10%;
-    --card-foreground: 210 20% 95%;
+    --card: 236 24% 8.5%; /* #10111b */
+    --card-foreground: 230 30% 94%;
 
-    --popover: 220 18% 10%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 236 24% 10%;
+    --popover-foreground: 230 30% 94%;
 
-    --primary: 217 91% 60%;
+    --primary: 239 78% 63%; /* #575aea, 5.19:1 with white */
     --primary-foreground: 0 0% 100%;
+    --primary-text: 234 89% 80%; /* #9fa8f9 link text: muted 7.44, card 8.41, bg 8.87 */
 
-    --secondary: 220 16% 16%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 236 20% 14%;
+    --secondary-foreground: 230 30% 94%;
 
-    --muted: 220 14% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 236 20% 14%; /* #1d1e2b, hover / track surface */
+    /* #a2a5b9: labels go down to 11px. muted 6.81, card 7.70, bg 8.12. */
+    --muted-foreground: 232 14% 68%;
 
-    --accent: 217 91% 60%;
+    --accent: 239 78% 63%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 355 88% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 28%;
-    --input: 220 13% 30%;
-    --ring: 217 91% 60%;
+    --border: 236 18% 19%; /* #282939 */
+    --input: 236 16% 25%;
+    --ring: 239 78% 63%;
 
-    --sidebar-background: 220 20% 5%;
-    --sidebar-foreground: 215 15% 65%;
-    --sidebar-primary: 217 91% 60%;
+    --radius: 8px;
+
+    --sidebar-background: 236 30% 6%;
+    --sidebar-foreground: 232 14% 68%;
+    --sidebar-primary: 239 78% 63%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 16% 12%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 13% 14%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 238 38% 17%;
+    --sidebar-accent-foreground: 230 30% 94%;
+    --sidebar-border: 236 18% 19%;
+    --sidebar-ring: 239 78% 63%;
 
-    --positive: 142 71% 45%;
+    /* Lifted off the canon greens/reds. Ratios are measured on --muted
+       (#1d1e2b), the lightest ground a delta, a chip or a hover row reaches
+       in this theme, so they hold on --card and --background too. */
+    --positive: 170 90% 36%; /* #09ae93: muted 5.94, card 6.71, bg 7.08 */
     --positive-foreground: 0 0% 100%;
-    --negative: 0 84% 60%;
+    --negative: 355 88% 68%; /* #f56672: muted 5.54, card 6.26, bg 6.61 */
     --negative-foreground: 0 0% 100%;
-    --closed: 0 72% 47%; /* deep blood red — distinct from --negative */
-    --warning: 45 93% 47%;
-    --warning-foreground: 0 0% 0%;
-    --info: 217 91% 60%;
+    --closed: 355 88% 68%;
+    --warning: 36 100% 50%; /* #ff9900: muted 7.75, card 8.76, bg 9.24 */
+    --warning-foreground: 236 28% 5%;
+    --info: 239 78% 63%;
+    --magenta: 288 53% 66%; /* #c47ad6, the AI purple lightened for text: muted 5.62, card 6.36, bg 6.71 */
 
-    --chart-1: 217 78% 62%;
-    --chart-2: 156 48% 50%;
-    --chart-3: 0 70% 62%;
-    --chart-4: 38 82% 58%;
-    --chart-5: 265 50% 66%;
-
-    --gradient-card: linear-gradient(135deg, hsl(220 18% 10%) 0%, hsl(220 20% 8%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(230 80% 55%) 100%);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3), 0 8px 24px -12px hsl(0 0% 0% / 0.5);
-    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.18);
+    --chart-1: 239 78% 63%;
+    --chart-2: 170 90% 36%;
+    --chart-3: 36 100% 50%;
+    --chart-4: 291 64% 55%;
+    --chart-5: 187 100% 42%;
+    --chart-6: 80 55% 50%;
+    --chart-7: 140 60% 44%;
+    --chart-8: 50 100% 50%; /* #ffd500, Smart Score yellow */
   }
 }
 
@@ -131,44 +150,77 @@
     @apply border-border;
   }
 
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  /* tabular-nums so figures keep column/row alignment everywhere mono is used. */
-  .font-mono {
+    font-size: 13px;
+    line-height: 20px;
     font-variant-numeric: tabular-nums;
+    /* Inter's open digits and single-storey a read cleaner at 13px. */
+    font-feature-settings: "cv11", "ss01";
   }
 
-  /* Centralised interactive cursor: every enabled <button> across the app
-     (shadcn Button primitive, native <button>, third-party libs) gets the
-     hand pointer. Disabled buttons fall back to the default cursor so the
-     "not interactive" cue is preserved. */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  @media (max-width: 767.98px) {
+    body {
+      font-size: 14px;
+      line-height: 21px;
+    }
+    /* iOS Safari zooms the page on focus below 16px and leaves it zoomed. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--input));
+    background-clip: content-box;
+  }
+  * {
+    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-width: thin;
+  }
+
   button:not(:disabled):not([aria-disabled="true"]):not([data-disabled="true"]) {
     cursor: pointer;
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
-  }
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
-  /* WCAG 2.3.3: honor the OS-level reduced-motion preference for every
-     CSS animation/transition/scroll-behavior in the app. */
+  /* WCAG 2.3.3. Spinners are exempt: a frozen spinner reads as a hang. */
   @media (prefers-reduced-motion: reduce) {
-    *,
+    *:not(.animate-spin),
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
@@ -180,46 +232,136 @@
 }
 
 @layer components {
+  /* ── Panels ─────────────────────────────────────────────────────────── */
+  .frame,
   .surface {
-    @apply rounded-lg border border-border/70 bg-card;
-    box-shadow: var(--shadow-card);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
   }
 
+  /* The panel header row: title left, controls right. Meant as the panel's
+     first child, above the body. */
+  .frame-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    height: 2.75rem;
+    padding-inline: 0.75rem;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: hsl(var(--foreground));
+    border-bottom: 1px solid hsl(var(--border));
+    margin-bottom: 0;
+    white-space: nowrap;
+    background: hsl(var(--primary) / 0.06);
+    border-top-left-radius: calc(var(--radius) - 1px);
+    border-top-right-radius: calc(var(--radius) - 1px);
+  }
+  /* The few headers that sit above a body with no padding of its own. */
+  .frame-title--spaced {
+    margin-bottom: 0.75rem;
+  }
+  .frame-title-right {
+    justify-content: flex-end;
+  }
+
+  /* A KPI cell inside a gap-px grid: label over value, no bar, no border. */
   .kpi-card {
-    @apply rounded-lg border border-border/70 bg-card p-5 transition-colors duration-200 flex flex-col justify-center;
-    box-shadow: var(--shadow-card);
-  }
-  .kpi-card:hover {
-    border-color: hsl(var(--border));
+    @apply flex flex-col justify-center gap-0.5 p-3;
+    background: hsl(var(--card));
   }
 
-  /* De-emphasized text/icon tones, floored to stay WCAG 2.2 AA-safe.
-     Ad-hoc opacity modifiers below these (text-muted-foreground/30, /40, /50,
-     /60...) were found to drop under 4.5:1 (text) / 3:1 (icons) once blended
-     toward the near-white light theme background — use these two instead of
-     picking an arbitrary fraction at the call site. */
   .text-faint {
-    @apply text-muted-foreground/90;
+    @apply text-muted-foreground;
   }
   .icon-faint {
-    @apply text-muted-foreground/70;
+    color: hsl(var(--muted-foreground));
   }
 
-  .metric-label {
-    @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+  .metric-label,
+  .control-label {
+    font-size: 12px;
+    line-height: 16px;
+    color: hsl(var(--muted-foreground));
   }
   .metric-value {
-    @apply font-mono text-2xl font-semibold tabular-nums tracking-tight text-foreground;
-  }
-  .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+    @apply text-foreground;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 28px;
+    letter-spacing: -0.02em;
   }
 
+  .page-title {
+    @apply flex items-center gap-2 text-foreground;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 32px;
+    letter-spacing: -0.025em;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: hsl(var(--foreground));
+  }
+
+  /* A nav row: icon and label. Active is a filled, rounded row in the brand
+     wash, with a bar on its leading edge. */
+  .menu-line {
+    @apply relative flex items-center gap-2.5 h-9 px-3 rounded-lg;
+    font-size: 13px;
+    line-height: 20px;
+    color: hsl(var(--muted-foreground));
+    transition:
+      color 120ms,
+      background-color 120ms;
+  }
+  .menu-line:hover:not([data-active="true"]) {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted));
+  }
+  .menu-line[data-active="true"] {
+    color: hsl(var(--foreground));
+    background: hsl(var(--primary) / 0.16);
+    box-shadow: inset 2px 0 0 hsl(var(--primary));
+    font-weight: 500;
+  }
+  .menu-line[data-active="true"] svg {
+    color: hsl(var(--primary-text));
+  }
+
+  /* `Key value · Key value`: keys muted, values in the text colour. */
+  .status-line {
+    font-size: 12px;
+    line-height: 20px;
+    color: hsl(var(--foreground));
+  }
+  .status-line .k {
+    color: hsl(var(--muted-foreground));
+  }
+  .status-note {
+    font-size: 12px;
+    line-height: 18px;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* ── Tables ─────────────────────────────────────────────────────────── */
   .data-table-row {
-    @apply border-b border-border transition-colors duration-150;
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
   }
   .data-table-row:hover {
-    background: hsl(var(--muted) / 0.5);
+    background: hsl(var(--muted) / 0.6);
+  }
+  thead th {
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   .delta-positive {
@@ -229,86 +371,110 @@
     color: hsl(var(--negative));
   }
 
-  .badge-new {
-    @apply inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold;
-    background: hsl(var(--positive) / 0.15);
+  /* ── Tags ───────────────────────────────────────────────────────────
+     One neutral chip surface carries every tag. Text in colour X over a 15%
+     wash of X cannot reach 4.5:1 at any hue: the wash tracks the text, so
+     tuning the token moves both. Measured as low as 2.13:1 before this.
+     The surface is now `--muted`, opaque and hue-free, and the colour lives
+     in the text alone; the delta tokens are tuned on `--muted` because it is
+     the lightest ground in dark and the darkest in light, so a token that
+     passes there passes on `--card` and `--background` as well. */
+  .chip,
+  .badge-new,
+  .badge-closed,
+  .badge-nochange,
+  .badge-bullish,
+  .badge-bearish,
+  .badge-neutral {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+    background: hsl(var(--muted));
+  }
+  .badge-new,
+  .badge-bullish {
     color: hsl(var(--positive));
   }
-  .badge-closed {
-    @apply inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold;
-    background: hsl(var(--negative) / 0.15);
+  .badge-closed,
+  .badge-bearish {
     color: hsl(var(--negative));
   }
   .badge-nochange {
-    @apply inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap;
-    background: hsl(var(--muted-foreground) / 0.15);
     color: hsl(var(--muted-foreground));
   }
-  .badge-bullish {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-bold;
-    background: hsl(var(--positive) / 0.15);
-    color: hsl(var(--positive));
-  }
-  .badge-bearish {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-bold;
-    background: hsl(var(--negative) / 0.15);
-    color: hsl(var(--negative));
-  }
   .badge-neutral {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-bold;
-    background: hsl(var(--warning) / 0.15);
     color: hsl(var(--warning));
   }
 
-  .section-title {
-    @apply font-display text-lg font-semibold tracking-tight text-foreground;
+  /* Dark only: the status tone also tints the chip. A 14% wash of the tone
+     over --muted keeps the tone's text at 4.57:1 or better (positive 4.83,
+     warning 6.04, negative 4.57), measured on the resulting grounds. Light
+     keeps the neutral chip: there the wash is what fell to 2.13:1. */
+  .dark :is(.chip.text-positive, .chip[class*="(--positive)"], .badge-new, .badge-bullish) {
+    background: color-mix(in srgb, hsl(var(--positive)) 14%, hsl(var(--muted)));
+    border-color: color-mix(in srgb, hsl(var(--positive)) 35%, hsl(var(--border)));
+  }
+  .dark :is(.chip.text-warning, .chip[class*="(--warning)"], .badge-neutral) {
+    background: color-mix(in srgb, hsl(var(--warning)) 14%, hsl(var(--muted)));
+    border-color: color-mix(in srgb, hsl(var(--warning)) 35%, hsl(var(--border)));
+  }
+  .dark :is(.chip.text-negative, .chip[class*="(--negative)"], .badge-closed, .badge-bearish) {
+    background: color-mix(in srgb, hsl(var(--negative)) 14%, hsl(var(--muted)));
+    border-color: color-mix(in srgb, hsl(var(--negative)) 35%, hsl(var(--border)));
   }
 
-  /* Page-level H1 used across all top-level routes. Scales down on small
-     screens so the header doesn't dominate the viewport on mobile. */
-  .page-title {
-    @apply font-display text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2;
+  /* The sector tag keeps its hue in the icon only. The icon is aria-hidden
+     and repeats the sector name printed beside it, so it is decorative and
+     1.4.11 does not bind: `--chart-1` is 2.64 on the chip and stays. */
+  .sector-pill {
+    color: hsl(var(--foreground));
   }
-  .page-title-icon {
-    @apply h-5 w-5 sm:h-6 sm:w-6;
+  .sector-pill svg {
+    color: var(--sector-hue, currentColor);
   }
 
   .ticker-link {
-    @apply font-mono font-semibold text-primary hover:underline cursor-pointer;
+    @apply font-medium cursor-pointer;
+    color: hsl(var(--primary-text));
+    transition: color 120ms;
   }
-
-  /* Sans, full-contrast company name — used everywhere a security's display
-     name appears alongside its ticker pill. Sans + medium weight is deliberate:
-     names are proper nouns, not codes, and need different typographic treatment
-     than the mono ticker. Hover hints at the link without competing with the
-     pill's stronger affordance. */
+  .ticker-link:hover {
+    text-decoration: underline;
+  }
   .company-link {
-    @apply font-sans font-medium text-foreground/95 hover:text-primary
-           focus-visible:text-primary focus-visible:outline-none
-           transition-colors cursor-pointer
-           inline-block align-bottom max-w-full truncate;
-    letter-spacing: -0.005em;
+    @apply font-medium text-foreground cursor-pointer inline-block align-bottom max-w-full truncate;
   }
-
-  /* Pill-style ticker chip with inline company logo. Used by <TickerLink>. */
+  .company-link:hover {
+    text-decoration: underline;
+  }
   .ticker-pill {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40
-           pl-1 pr-2.5 py-0.5 font-mono text-xs font-semibold text-foreground
-           cursor-pointer transition-colors;
+    @apply inline-flex items-center gap-1.5 pl-1 pr-2 font-medium text-foreground cursor-pointer;
+    font-size: 12px;
+    line-height: 20px;
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px);
+    transition:
+      background-color 120ms,
+      border-color 120ms;
   }
   .ticker-pill:hover,
   .ticker-pill:focus-visible {
-    @apply bg-accent/10 border-primary/50 text-primary;
+    background: hsl(var(--muted));
+    border-color: hsl(var(--input));
   }
-  .ticker-pill:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-1 ring-offset-background;
-  }
-
   .fund-link {
-    @apply font-medium text-foreground hover:text-primary cursor-pointer transition-colors;
+    @apply font-medium text-foreground cursor-pointer;
+  }
+  .fund-link:hover {
+    text-decoration: underline;
   }
 
-  /* Number input spinners — hide default, use custom approach */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -317,5 +483,23 @@
   }
   input[type="number"] {
     -moz-appearance: textfield;
+  }
+}
+
+@layer utilities {
+  /* Grows a small inline link's hit area on phones without changing its look. */
+  .tap-target {
+    position: relative;
+  }
+  @media (max-width: 767.98px) {
+    .tap-target::after {
+      content: "";
+      position: absolute;
+      inset: -10px -4px;
+    }
+  }
+
+  .text-magenta {
+    color: hsl(var(--magenta));
   }
 }

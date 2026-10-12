@@ -1,21 +1,22 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
-import { Loader2 } from "lucide-react";
+import { LoadingState } from "@/components/ui/LoadingState";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import { IS_GH_PAGES_MODE, BASE_PATH } from "@/lib/config";
 import { ROUTES } from "@/lib/routes";
+import { shouldRetryQuery } from "@/lib/queryRetry";
 
 // Route-level code splitting: each page ships as its own chunk and loads on navigation.
 const QuarterlyTrends = lazy(() => import("@/pages/QuarterlyTrends"));
 const StrategyPerformance = lazy(() => import("@/pages/StrategyPerformance"));
 const RegimeSignals = lazy(() => import("@/pages/RegimeSignals"));
+const FundRanking = lazy(() => import("@/pages/FundRanking"));
 const FundPortfolio = lazy(() => import("@/pages/FundPortfolio"));
 const StockAnalysis = lazy(() => import("@/pages/StockAnalysis"));
 const StockBrowser = lazy(() => import("@/pages/StockBrowser"));
@@ -23,28 +24,24 @@ const AIRanking = lazy(() => import("@/pages/AIRanking"));
 const AIDueDiligence = lazy(() => import("@/pages/AIDueDiligence"));
 const AISettings = lazy(() => import("@/pages/AISettings"));
 const Learn = lazy(() => import("@/pages/Learn"));
+const About = lazy(() => import("@/pages/About"));
 const FundsConfig = lazy(() => import("@/pages/FundsConfig"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-// Explicit defaults: retry transient CSV/API failures with backoff (the
-// library default, made intentional) and treat data as fresh for a minute so
-// rapid navigation between pages doesn't refetch the whole CSV database.
+// Retry only transient CSV/API failures (see shouldRetryQuery) and treat data
+// as fresh for a minute so rapid navigation doesn't refetch the CSV database.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3,
+      retry: shouldRetryQuery,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
       staleTime: 60_000,
     },
   },
 });
 
-const RouteFallback = () => (
-  <div className="flex items-center justify-center py-16 text-muted-foreground">
-    <Loader2 className="h-5 w-5 animate-spin" />
-  </div>
-);
+const RouteFallback = () => <LoadingState message="Loading screen" />;
 
 // Must live inside BrowserRouter: keys the boundary on the pathname so
 // navigating away from a crashed page recovers automatically.
@@ -56,7 +53,6 @@ const RoutedErrorBoundary = ({ children }: { children: ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
       <Sonner />
       <BrowserRouter basename={BASE_PATH || "/"}>
         <DashboardLayout>
@@ -71,6 +67,7 @@ const App = () => (
                 <Route path={ROUTES.quarterly} element={<QuarterlyTrends />} />
                 <Route path={ROUTES.strategyPerformance} element={<StrategyPerformance />} />
                 <Route path={ROUTES.regime} element={<RegimeSignals />} />
+                <Route path={ROUTES.fundRanking} element={<FundRanking />} />
                 <Route path={ROUTES.funds} element={<FundPortfolio />} />
                 <Route path={`${ROUTES.funds}/:fundId`} element={<FundPortfolio />} />
                 <Route path={ROUTES.stocks} element={<StockBrowser />} />
@@ -78,6 +75,7 @@ const App = () => (
 
                 {/* Educational FAQ — public, available in every mode */}
                 <Route path={ROUTES.learn} element={<Learn />} />
+                <Route path={ROUTES.about} element={<About />} />
 
                 {/* AI routes — available but disabled in GH Pages mode */}
                 <Route path={ROUTES.aiRanking} element={<AIRanking />} />

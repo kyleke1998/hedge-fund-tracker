@@ -3,9 +3,10 @@
  * app/database/quarters.py responsibilities on the client side).
  */
 
+import { applyRestatements, getFilingRegister } from "./filingRegister";
 import { BASE_PATH, IS_GH_PAGES_MODE } from "../config";
-import { parseQuarters, type Quarter } from "../quarters";
-import { cachedFetch, fetchCSV } from "./fetch";
+import { latestUsableQuarter, parseQuarters, type Quarter } from "../quarters";
+import { cachedFetch, DataFormatError, fetchCSV, HttpError } from "./fetch";
 import { formatPct, formatValueShort, parseValueString } from "./format";
 import { fundNameToFileName } from "./funds";
 import type { QuarterlyHolding, RawQuarterlyHolding } from "./types";
@@ -28,14 +29,18 @@ export async function getAvailableQuarters(): Promise<readonly Quarter[]> {
 }
 
 /**
- * Returns the most recent quarter as resolved by the backend, or null if none exist.
- * Backend is the single source of truth; frontend does not sort the quarter list itself.
- * Caching is intentionally delegated to react-query at the call site.
+ * Returns the newest quarter with enough filings to be analysed (a quarter with under half the
+ * previous usable one's filings is still filling in), or null if none exist.
+ * Backend is the single source of truth locally; GH Pages derives it from the per-quarter
+ * filing counts in metadata.json with the same rule. Caching is intentionally delegated to
+ * react-query at the call site.
  */
 export async function getLatestQuarter(): Promise<Quarter | null> {
   if (IS_GH_PAGES_MODE) {
-    const quarters = await getAvailableQuarters();
-    return quarters.at(-1) ?? null;
+    const response = await fetch(`${BASE_PATH}/database/metadata.json`);
+    if (!response.ok) throw new Error("Failed to load metadata.json");
+    const metadata: { filings?: Record<string, number> } = await response.json();
+    return latestUsableQuarter(metadata.filings ?? {});
   }
   const response = await fetch(`${window.location.origin}/api/database/quarters/latest`);
   if (!response.ok) throw new Error("Failed to fetch latest quarter");
@@ -54,8 +59,10 @@ export async function getFundAvailableQuarters(fundName: string): Promise<Quarte
         try {
           const fundList = await getQuarterFundList(q);
           return fundList.includes(fileName) ? q : null;
-        } catch {
-          return null;
+        } catch (err) {
+          // Only a missing quarter is "fund absent"; a transient failure must not cache a stale list.
+          if (err instanceof HttpError && err.status === 404) return null;
+          throw err;
         }
       }),
     );
@@ -68,15 +75,19 @@ export async function getQuarterFundList(quarter: string): Promise<string[]> {
     if (IS_GH_PAGES_MODE) {
       // In GH Pages mode, read from bundled manifest.json
       const response = await fetch(`${BASE_PATH}/database/${quarter}/manifest.json`);
-      if (!response.ok) throw new Error(`No data available for ${quarter}`);
+      if (!response.ok) {
+        throw new HttpError(`No data available for ${quarter}`, response.status);
+      }
       const manifest: unknown = await response.json();
       if (!Array.isArray(manifest) || !manifest.every((f) => typeof f === "string")) {
-        throw new Error(`Malformed manifest.json for ${quarter}`);
+        throw new DataFormatError(`Malformed manifest.json for ${quarter}`);
       }
       return manifest;
     }
     const response = await fetch(`${window.location.origin}/api/database/quarters/${quarter}`);
-    if (!response.ok) throw new Error(`Failed to list funds for ${quarter}`);
+    if (!response.ok) {
+      throw new HttpError(`Failed to list funds for ${quarter}`, response.status);
+    }
     const files: string[] = await response.json();
     return files;
   });
@@ -102,7 +113,7 @@ export async function getFundQuarterlyHoldings(
         "Portfolio%",
       ] satisfies readonly (keyof RawQuarterlyHolding)[],
     );
-    return raw.map((r) => ({
+    const holdings = raw.map((r) => ({
       cusip: r.CUSIP,
       ticker: r.Ticker,
       company: r.Company,
@@ -113,6 +124,7 @@ export async function getFundQuarterlyHoldings(
       delta: r.Delta,
       portfolioPct: parseFloat(r["Portfolio%"]) || 0,
     }));
+    return applyRestatements(holdings, await getFilingRegister(), quarter, fundName);
   });
 }
 

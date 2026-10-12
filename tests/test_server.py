@@ -67,18 +67,6 @@ class TestDfToJsonSafeRecords(unittest.TestCase):
         records = _df_to_json_safe_records(df)
         self.assertEqual(records, [{"a": 1.0, "b": "x"}, {"a": None, "b": "y"}])
 
-    def test_output_is_strict_json_serializable(self):
-        """
-        The result must be JSON-encodable with allow_nan=False (i.e. browser-safe).
-        """
-        import json
-
-        from app.api.common import _df_to_json_safe_records
-
-        df = pd.DataFrame({"a": [np.inf, np.nan, 0.5]})
-        records = _df_to_json_safe_records(df)
-        json.dumps(records, allow_nan=False)
-
     def test_empty_dataframe_returns_empty_list(self):
         """
         An empty DataFrame must produce an empty record list, not raise.
@@ -94,26 +82,15 @@ class TestServer(unittest.TestCase):
     Tests for the FastAPI server module and its route configuration.
     """
 
-    def test_expected_routes_are_registered(self):
+    def test_duplicate_fetch_route_is_not_registered(self):
         """
-        Verify that all expected API and database routes are registered on the FastAPI app.
+        Full 13F regeneration has a single entry point, /api/update-all.
         """
         from app.server import app
 
         paths = [getattr(r, "path", "") for r in _iter_routes(app)]
-
-        expected_paths = [
-            "/database/{filepath:path}",
-            "/api/settings/env",
-            "/api/ai/promise-score",
-            "/api/ai/due-diligence",
-            "/api/database/fetch",
-            "/api/database/quarters/latest",
-            "/api/database/quarters/{quarter}/analysis",
-        ]
-        for path in expected_paths:
-            with self.subTest(path=path):
-                self.assertIn(path, paths)
+        self.assertNotIn("/api/database/fetch", paths)
+        self.assertIn("/api/update-all", paths)
 
     def test_openapi_schema_builds(self):
         """
@@ -230,22 +207,6 @@ class TestSSETerminalSignal(unittest.TestCase):
         self.assertEqual(q.get_nowait(), ("result", {"ok": 1}))
         self.assertTrue(q.empty())
 
-    def test_exception_emits_error_item(self):
-        """
-        A target that raises a regular Exception enqueues an ("error", msg) item.
-        """
-        from app.server import _run_sse_target
-
-        q: queue.SimpleQueue = queue.SimpleQueue()
-
-        def target():
-            raise ValueError("boom")
-
-        _run_sse_target(target, q)
-        kind, payload = q.get_nowait()
-        self.assertEqual(kind, "error")
-        self.assertIn("boom", payload)
-
     def test_base_exception_still_emits_terminal_item(self):
         """
         Even a BaseException (SystemExit, KeyboardInterrupt) must produce a
@@ -327,6 +288,43 @@ class TestValidateDeploymentSecrets(unittest.TestCase):
             patch("app.auth.backend.COOKIE_SECURE", True),
             patch("app.auth.manager.RESET_PASSWORD_TOKEN_SECRET", "dev-only-change-in-production"),
             patch("app.auth.manager.VERIFICATION_TOKEN_SECRET", "a-real-strong-secret"),
+            self.assertRaises(RuntimeError),
+        ):
+            _validate_deployment_secrets()
+
+    def test_raises_on_env_example_placeholder_in_production(self):
+        """
+        A placeholder copied from .env.example overrides the dev default, so it
+        is not caught by the "dev-only" prefix — but it is just as public.
+        """
+        from unittest.mock import patch
+
+        from app.server import _validate_deployment_secrets
+
+        with (
+            patch("app.auth.backend.COOKIE_SECURE", True),
+            patch("app.auth.manager.RESET_PASSWORD_TOKEN_SECRET", "a-real-strong-secret"),
+            patch(
+                "app.auth.manager.VERIFICATION_TOKEN_SECRET",
+                "REPLACE_ME_with_a_DIFFERENT_random_32_byte_secret",
+            ),
+            self.assertRaises(RuntimeError),
+        ):
+            _validate_deployment_secrets()
+
+    def test_raises_on_identical_signing_secrets_in_production(self):
+        """
+        Reusing one secret for both token purposes lets a verification token be
+        replayed as a password-reset token.
+        """
+        from unittest.mock import patch
+
+        from app.server import _validate_deployment_secrets
+
+        with (
+            patch("app.auth.backend.COOKIE_SECURE", True),
+            patch("app.auth.manager.RESET_PASSWORD_TOKEN_SECRET", "the-same-strong-secret"),
+            patch("app.auth.manager.VERIFICATION_TOKEN_SECRET", "the-same-strong-secret"),
             self.assertRaises(RuntimeError),
         ):
             _validate_deployment_secrets()

@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 from bs4 import BeautifulSoup  # noqa: E402
 
 from app.analysis.quarterly_report import generate_comparison  # noqa: E402
+from app.analysis.splits import factors_between  # noqa: E402
 from app.database import (  # noqa: E402
     MIN_REFERENCE_DATE,
     clean_stocks,
@@ -30,6 +31,9 @@ from app.database import (  # noqa: E402
     save_comparison,
     sort_stocks,
 )
+from app.database.filing_anomalies import corrections_for  # noqa: E402
+from app.database.splits import load_split_factors  # noqa: E402
+from app.scraper.amendments import consolidate_period  # noqa: E402
 from app.scraper.sec_scraper import (  # noqa: E402
     _create_search_url,
     _get_request,
@@ -37,7 +41,7 @@ from app.scraper.sec_scraper import (  # noqa: E402
     scraper_session,
 )
 from app.scraper.xml_processor import xml_to_dataframe_13f  # noqa: E402
-from app.utils.strings import get_previous_quarter_end_date  # noqa: E402
+from app.utils.strings import get_previous_quarter_end_date, get_quarter  # noqa: E402
 
 # One quarter before MIN_REFERENCE_DATE: needed as the previous side of the
 # oldest regenerated comparison.
@@ -48,16 +52,11 @@ def dedupe_filings_by_period(filings: list[dict]) -> list[dict]:
     """
     Keeps one filing per reporting period and orders them newest period first.
 
-    EDGAR lists filings by publication date descending, so the first
-    occurrence of a reference date is the most recently filed version — the
-    amendment when one exists.
+    EDGAR lists filings by publication date descending, so the most recently
+    filed version of a period wins (the restatement when one exists), with any
+    later partial NEW HOLDINGS amendment merged into it (app.scraper.amendments).
     """
-    seen: dict[str, dict] = {}
-    for filing in filings:
-        ref = filing.get("reference_date")
-        if ref and ref not in seen:
-            seen[ref] = filing
-    return sorted(seen.values(), key=lambda f: f["reference_date"], reverse=True)
+    return consolidate_period(filings)
 
 
 def build_comparison_pairs(filings: list[dict], min_reference_date: str) -> list[tuple]:
@@ -129,14 +128,28 @@ def regenerate_fund(fund: dict) -> int:
 
     filings = dedupe_filings_by_period(fetch_fund_filings(cik))
     pairs = build_comparison_pairs(filings, MIN_REFERENCE_DATE)
+    split_registry = load_split_factors()
 
     # Oldest first: if multiple writes ever target the same quarter (e.g. a
     # future change weakening the dedupe), the newest version wins.
     regenerated = 0
     for current, previous in reversed(pairs):
-        df_current = xml_to_dataframe_13f(current["xml_content"])
-        df_previous = xml_to_dataframe_13f(previous["xml_content"]) if previous else None
-        comparison = generate_comparison(df_current, df_previous)
+        quarter = get_quarter(current["reference_date"])
+        previous_quarter = get_quarter(previous["reference_date"]) if previous else None
+        df_current = xml_to_dataframe_13f(
+            current["xml_content"], corrections=corrections_for(fund_name, quarter)
+        )
+        df_previous = (
+            xml_to_dataframe_13f(
+                previous["xml_content"],
+                corrections=corrections_for(fund_name, previous_quarter),
+            )
+            if previous and previous_quarter
+            else None
+        )
+        comparison = generate_comparison(
+            df_current, df_previous, factors_between(split_registry, previous_quarter, quarter)
+        )
         save_comparison(
             comparison, current["reference_date"], fund_name, filing_date=current.get("date")
         )

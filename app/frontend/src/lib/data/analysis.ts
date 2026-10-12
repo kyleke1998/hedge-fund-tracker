@@ -6,7 +6,7 @@
 import { IS_GH_PAGES_MODE } from "../config";
 import { quarterEndDate } from "../quarters";
 import { withSmartScores } from "../smartScore";
-import { cachedFetch } from "./fetch";
+import { cachedFetch, DataFormatError } from "./fetch";
 import { formatPct, parseValueString } from "./format";
 import { fileNameToFundName } from "./funds";
 import { getEnrichedNQFilings } from "./nonQuarterly";
@@ -23,8 +23,9 @@ import type {
 /**
  * Fetch the pre-aggregated quarter analysis from the backend (single request).
  *
- * Returns null in GH Pages mode (no backend); callers should fall back to the
- * client-side `runQuarterAnalysis` which fetches each fund CSV individually.
+ * Returns null in GH Pages mode (no backend) or when the backend can't serve
+ * the frame; callers then fall back to the client-side `runQuarterAnalysis`,
+ * which fetches each fund CSV individually.
  */
 export async function fetchQuarterAnalysis(
   quarter: string,
@@ -32,29 +33,40 @@ export async function fetchQuarterAnalysis(
   if (IS_GH_PAGES_MODE) return null;
   const url = `${window.location.origin}/api/database/quarters/${encodeURIComponent(quarter)}/analysis`;
   const response = await fetch(url);
-  if (!response.ok) throw new Error("Failed to fetch quarter analysis");
+  if (!response.ok) return null;
   interface RawAnalysisRow {
-    Ticker?: string;
-    Company?: string;
-    Total_Value?: number;
-    Total_Delta_Value?: number;
-    Max_Portfolio_Pct?: number;
-    Avg_Portfolio_Pct?: number;
-    Buyer_Count?: number;
-    Seller_Count?: number;
-    Holder_Count?: number;
-    New_Holder_Count?: number;
-    Close_Count?: number;
-    High_Conviction_Count?: number;
-    Net_Buyers?: number;
-    Buyer_Seller_Ratio?: number;
-    Ownership_Delta_Avg?: number;
-    Avg_Fund_Concentration?: number;
-    Delta?: number;
+    Ticker?: string | null;
+    Company?: string | null;
+    Total_Value?: number | null;
+    Total_Delta_Value?: number | null;
+    Max_Portfolio_Pct?: number | null;
+    Avg_Portfolio_Pct?: number | null;
+    Buyer_Count?: number | null;
+    Seller_Count?: number | null;
+    Holder_Count?: number | null;
+    New_Holder_Count?: number | null;
+    Close_Count?: number | null;
+    High_Conviction_Count?: number | null;
+    Net_Buyers?: number | null;
+    Buyer_Seller_Ratio?: number | null;
+    Ownership_Delta_Avg?: number | null;
+    Avg_Fund_Concentration?: number | null;
+    Delta?: number | null;
   }
   const body: unknown = await response.json();
-  if (!Array.isArray(body)) throw new Error("Malformed quarter analysis: expected an array");
-  const raw = body as RawAnalysisRow[];
+  if (!Array.isArray(body))
+    throw new DataFormatError("Malformed quarter analysis: expected an array");
+  const isRow = (v: unknown): v is RawAnalysisRow => {
+    if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+    return Object.entries(v).every(([key, value]) =>
+      key === "Ticker" || key === "Company"
+        ? value == null || typeof value === "string"
+        : value == null || typeof value === "number",
+    );
+  };
+  if (!body.every(isRow))
+    throw new DataFormatError("Malformed quarter analysis: unexpected row shape");
+  const raw = body;
   // JSON has no ±Infinity: the backend serializer nulls it out. An all-new
   // stock's delta IS Infinity (same rule as aggregateStockLevel) — rebuild it
   // instead of flattening to 0%, which would mislabel NEW positions.
@@ -99,18 +111,22 @@ export async function fetchQuarterAnalysis(
  * per-fund upstream); the activity flags are derived here.
  */
 export function aggregateStockLevel(holdings: FundTickerHolding[]): StockQuarterAnalysis[] {
-  const flagged = holdings.map((h) => {
-    const isNew = h.shares > 0 && h.shares === h.deltaShares;
-    return {
-      ...h,
-      isBuyer: h.deltaValue > 0,
-      isSeller: h.deltaValue < 0,
-      isHolder: h.shares > 0,
-      isNew,
-      isClosed: h.shares === 0,
-      isHighConviction: isNew && (h.portfolioPctRank <= 10 || h.portfolioPct > 3.0),
-    };
-  });
+  // A fund with no position left has left the universe: it is not a seller of what it held.
+  const activeFunds = new Set(holdings.filter((h) => h.shares > 0).map((h) => h.fund));
+  const flagged = holdings
+    .filter((h) => activeFunds.has(h.fund))
+    .map((h) => {
+      const isNew = h.shares > 0 && h.shares === h.deltaShares;
+      return {
+        ...h,
+        isBuyer: h.deltaValue > 0,
+        isSeller: h.deltaValue < 0,
+        isHolder: h.shares > 0,
+        isNew,
+        isClosed: h.shares === 0,
+        isHighConviction: isNew && (h.portfolioPctRank <= 10 || h.portfolioPct > 3.0),
+      };
+    });
 
   interface StockQuarterAccumulator extends StockQuarterAnalysis {
     _sumPct: number;

@@ -9,12 +9,17 @@ on:
     branches:
       - master
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   python-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     env:
       PIPENV_VENV_IN_PROJECT: "1"
@@ -27,7 +32,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Cache pipenv virtualenv
         uses: actions/cache@v6
@@ -50,6 +55,7 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository code
@@ -58,15 +64,15 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version-file: .nvmrc
           cache: "npm"
           cache-dependency-path: "app/frontend/package-lock.json"
 
       - name: Install frontend dependencies
-        run: cd app/frontend && npm ci
+        run: cd app/frontend && npm ci --prefer-offline --no-audit --fund=false
 
       - name: Run frontend tests
-        run: cd app/frontend && npm test
+        run: cd app/frontend && npm run test:coverage
 
   summary:
     runs-on: ubuntu-latest

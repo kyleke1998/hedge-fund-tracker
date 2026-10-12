@@ -19,18 +19,13 @@ export interface SmartScoreView {
  */
 export function smartScoreToneClass(score: number): string {
   if (score >= HIGH_SCORE) return "text-[hsl(var(--positive))]";
-  if (score >= MID_SCORE) return "text-amber-500";
+  if (score >= MID_SCORE) return "text-[hsl(var(--warning))]";
   return "text-[hsl(var(--negative))]";
 }
 
-/**
- * Full chip styling (border + background + text) for the same score buckets.
- */
+/** Chip styling for the same score buckets: the neutral chip, no border. */
 export function smartScoreChipClass(score: number): string {
-  if (score >= HIGH_SCORE)
-    return "border-[hsl(var(--positive))]/40 bg-[hsl(var(--positive))]/10 text-[hsl(var(--positive))]";
-  if (score >= MID_SCORE) return "border-amber-500/40 bg-amber-500/10 text-amber-500";
-  return "border-[hsl(var(--negative))]/40 bg-[hsl(var(--negative))]/10 text-[hsl(var(--negative))]";
+  return `chip ${smartScoreToneClass(score)}`;
 }
 
 /**
@@ -39,7 +34,7 @@ export function smartScoreChipClass(score: number): string {
  */
 export function percentileBarClass(value: number): string {
   if (value >= HIGH_SCORE * 10) return "bg-[hsl(var(--positive))]";
-  if (value >= MID_SCORE * 10) return "bg-amber-500";
+  if (value >= MID_SCORE * 10) return "bg-[hsl(var(--warning))]";
   return "bg-[hsl(var(--negative))]";
 }
 
@@ -108,4 +103,26 @@ export function withSmartScores<T extends StockQuarterAnalysis>(rows: T[]): T[] 
     scoreMomentum: components[i].momentum,
     scoreConviction: components[i].conviction,
   }));
+}
+
+/** The fields a stock row needs to be ranked by Smart Score. */
+type SmartScored = Pick<
+  StockQuarterAnalysis,
+  "smartScore" | "scoreBreadth" | "scoreMomentum" | "scoreConviction"
+>;
+
+/**
+ * Descending comparator by Smart Score. The score is shown rounded to one decimal, so rows tied
+ * on it are ordered by the unrounded composite (the mean of their component percentiles).
+ */
+export function compareBySmartScore(a: SmartScored, b: SmartScored): number {
+  return (b.smartScore ?? 0) - (a.smartScore ?? 0) || componentsMean(b) - componentsMean(a);
+}
+
+/** Mean of the percentiles a stock has, the unrounded form of its composite. */
+function componentsMean(r: SmartScored): number {
+  const parts = [r.scoreBreadth, r.scoreMomentum, r.scoreConviction].filter(
+    (v): v is number => v != null,
+  );
+  return parts.length ? parts.reduce((s, v) => s + v, 0) / parts.length : 0;
 }

@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getStocks, runQuarterAnalysis } from "@/lib/dataService";
+import { getStocks } from "@/lib/dataService";
 import { useAvailableQuarters } from "@/hooks/useAvailableQuarters";
+import { useQuarterAnalysis } from "@/hooks/useQuarterAnalysis";
 import { HoldingsTreemap } from "@/components/HoldingsTreemap";
+import { PanelTitle } from "@/components/ui/PanelTitle";
+import { QueryState } from "@/components/ui/QueryState";
 import { Loader2, Info } from "lucide-react";
 
 interface SectorGroup {
@@ -25,12 +28,12 @@ export default function SectorHeatmap({
     queryFn: getStocks,
   });
 
-  const { data: quarterData = [], isLoading: quarterLoading } = useQuery({
-    queryKey: ["quarterAnalysis", latestQuarter],
-    queryFn: () => runQuarterAnalysis(latestQuarter!),
-    enabled: !!latestQuarter,
-    staleTime: 10 * 60 * 1000,
-  });
+  const {
+    data: quarterData = [],
+    isLoading: quarterLoading,
+    isError: quarterError,
+    error,
+  } = useQuarterAnalysis(latestQuarter);
 
   // Check if any stock has a sector assigned
   const hasSectorData = useMemo(
@@ -71,6 +74,10 @@ export default function SectorHeatmap({
 
   const isLoading = stocksLoading || quarterLoading;
 
+  if (quarterError) {
+    return <QueryState isError error={error} title="Could not load the sector heatmap" />;
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground py-12 justify-center">
@@ -81,26 +88,29 @@ export default function SectorHeatmap({
 
   if (!hasSectorData) {
     return (
-      <div className="flex items-start gap-2.5 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-        <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+      <div className="flex items-start gap-2.5 rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div>
           <strong className="text-foreground">Sector heatmap is not yet active.</strong> It will
-          become available once the{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">Sector</code> column is populated
-          in <code className="text-xs bg-muted px-1 py-0.5 rounded">stocks.csv</code>.
+          become available once the <code className="text-xs bg-muted px-1 py-0.5">Sector</code>{" "}
+          column is populated in <code className="text-xs bg-muted px-1 py-0.5">stocks.csv</code>.
         </div>
       </div>
     );
   }
 
   return (
-    <div className="surface p-5 space-y-3">
-      <h3 className="section-title text-sm">Institutional Value by Sector</h3>
-      <HoldingsTreemap
-        data={sectorHeatmapData}
-        onClickTicker={(sector) => onSectorClick?.(sector)}
-        height={350}
-      />
+    <div className="frame">
+      <div className="frame-title">
+        <PanelTitle>Institutional value by sector</PanelTitle>
+      </div>
+      <div className="p-3">
+        <HoldingsTreemap
+          data={sectorHeatmapData}
+          onClickTicker={(sector) => onSectorClick?.(sector)}
+          height={350}
+        />
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useElementSize } from "@/hooks/useElementSize";
 import {
   Area,
+  CartesianGrid,
   ComposedChart,
   Bar,
   Line,
@@ -24,8 +25,9 @@ import {
   type CostBasisFields,
   type CostBasisPoint,
 } from "@/lib/costBasisBand";
+import { GRID, NEGATIVE, NEUTRAL, POSITIVE, chartAnimationActive } from "@/lib/seriesColors";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { Toggle } from "@/components/ui/toggle";
+import { PanelTitle } from "@/components/ui/PanelTitle";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 type RangeKey = "YTD" | "1Y" | "3Y" | "5Y" | "MAX";
@@ -34,16 +36,19 @@ type Candle = { date: string; open: number; high: number; low: number; close: nu
 type CandlePoint = Candle & HoldingsOverlayFields & Partial<CostBasisFields>;
 type CandleWithRange = CandlePoint & { range: [number, number] };
 
-const RANGES: ReadonlyArray<{ key: RangeKey; label: string; period: string }> = [
-  { key: "YTD", label: "YTD", period: "ytd" },
-  { key: "1Y", label: "1Y", period: "1y" },
-  { key: "3Y", label: "3Y", period: "3y" },
-  { key: "5Y", label: "5Y", period: "5y" },
-  { key: "MAX", label: "Max", period: "max" },
-];
+const RANGE_INFO: Record<RangeKey, { label: string; period: string }> = {
+  YTD: { label: "YTD", period: "ytd" },
+  "1Y": { label: "1Y", period: "1y" },
+  "3Y": { label: "3Y", period: "3y" },
+  "5Y": { label: "5Y", period: "5y" },
+  MAX: { label: "Max", period: "max" },
+};
+const RANGE_KEYS: readonly RangeKey[] = ["YTD", "1Y", "3Y", "5Y", "MAX"];
 
-const UP_COLOR = "hsl(142, 60%, 45%)";
-const DOWN_COLOR = "hsl(0, 65%, 55%)";
+const UP_COLOR = POSITIVE;
+const DOWN_COLOR = NEGATIVE;
+const AXIS_TICK = { fill: NEUTRAL, fontSize: 11 };
+const CURSOR = { stroke: NEUTRAL, strokeOpacity: 0.4, strokeDasharray: "2 4" };
 const HOLDINGS_COLOR = "hsl(220, 75%, 60%)";
 const COST_BASIS_COLOR = "hsl(0, 78%, 55%)";
 
@@ -145,7 +150,7 @@ export function StockPriceChart({
   const [range, setRange] = useState<RangeKey>("5Y");
   const [mode, setMode] = useState<ChartMode>("candles");
   const [showBasis, setShowBasis] = useState(true);
-  const period = RANGES.find((r) => r.key === range)!.period;
+  const period = RANGE_INFO[range].period;
   const [containerRef, size] = useElementSize();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -286,9 +291,11 @@ export function StockPriceChart({
 
   if (!API_BASE && !staticData) {
     return (
-      <div className="surface p-5">
-        <h3 className="section-title text-sm">Price History</h3>
-        <p className="mt-2 text-xs text-muted-foreground">
+      <div className="frame">
+        <div className="frame-title">
+          <PanelTitle>Price history</PanelTitle>
+        </div>
+        <p className="px-3 py-3 text-xs text-muted-foreground">
           Live price history requires the local Python backend (yfinance). It is not available on
           the static GitHub Pages build — clone the repo and run the app locally to view this chart.
         </p>
@@ -298,7 +305,6 @@ export function StockPriceChart({
 
   const positive = stats ? stats.change >= 0 : true;
   const lineColor = positive ? UP_COLOR : DOWN_COLOR;
-  const gradientId = `priceGradient-${ticker}-${positive ? "up" : "down"}`;
 
   const headerPositive = positive;
   // A basis built years ago can sit far below a recent price, and pinning the
@@ -331,17 +337,11 @@ export function StockPriceChart({
     )
       return null;
 
-    // Inner wrapper: shifts the tooltip to the top-right of the cursor (translateY pulls it above
-    // the cursor's vertical position; recharts already places it to the right of the cursor).
+    // translateY pulls the tooltip above the cursor; recharts already places it to the right.
+    const tooltipClass =
+      "rounded-md border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-md tabular-nums";
     const tooltipBox: React.CSSProperties = {
-      background: "hsl(var(--card))",
-      border: "1px solid hsl(var(--border))",
-      borderRadius: 6,
-      padding: "8px 12px",
-      fontSize: 12,
-      color: "hsl(var(--foreground))",
       lineHeight: 1.6,
-      fontFamily: "var(--font-mono)",
       transform: "translateY(calc(-100% - 12px))",
     };
 
@@ -349,7 +349,7 @@ export function StockPriceChart({
     if (isDragging && selectionStats) {
       const sel = selectionStats;
       return (
-        <div style={tooltipBox}>
+        <div className={tooltipClass} style={tooltipBox}>
           <div style={{ color: "hsl(var(--muted-foreground))" }}>
             {fmtDateFull(sel.start.date)} → {fmtDateFull(sel.end.date)}
           </div>
@@ -370,7 +370,7 @@ export function StockPriceChart({
     const delta = ((p.close - baseline) / baseline) * 100;
     const isUp = p.close >= p.open;
     return (
-      <div style={tooltipBox}>
+      <div className={tooltipClass} style={tooltipBox}>
         <div style={{ color: "hsl(var(--muted-foreground))" }}>{fmtDateFull(p.date)}</div>
         {mode === "candles" ? (
           <div
@@ -442,16 +442,78 @@ export function StockPriceChart({
     );
   };
 
+  // Overlay layers shared by the candle and area charts. Both quarterly series
+  // are step lines (a 13F is a snapshot, not a continuous quantity).
+  const holdingsAxis = holdingsDomain ? (
+    <YAxis
+      yAxisId="holdings"
+      orientation="right"
+      tickFormatter={formatValueShort}
+      tick={{ fill: HOLDINGS_COLOR, fontSize: 11 }}
+      axisLine={false}
+      tickLine={false}
+      width={56}
+      domain={holdingsDomain}
+    />
+  ) : null;
+
+  const costBasisLayers =
+    showBasis && basisExtent ? (
+      <>
+        <Area
+          yAxisId="price"
+          type="stepAfter"
+          dataKey="costBasisRange"
+          name="Estimated cost basis"
+          stroke="none"
+          fill={COST_BASIS_COLOR}
+          fillOpacity={0.16}
+          connectNulls={false}
+          activeDot={false}
+          isAnimationActive={false}
+        />
+        <Line
+          yAxisId="price"
+          type="stepAfter"
+          dataKey="costBasisMid"
+          name="Estimated cost basis"
+          stroke={COST_BASIS_COLOR}
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+          strokeOpacity={0.9}
+          dot={false}
+          activeDot={false}
+          connectNulls={false}
+          isAnimationActive={false}
+        />
+      </>
+    ) : null;
+
+  const holdingsLine = holdingsDomain ? (
+    <Line
+      yAxisId="holdings"
+      type="stepAfter"
+      dataKey="holdingsShares"
+      name="Total shares held"
+      stroke={HOLDINGS_COLOR}
+      strokeWidth={1.75}
+      dot={false}
+      activeDot={false}
+      connectNulls={false}
+      isAnimationActive={false}
+    />
+  ) : null;
+
   return (
-    <div className="surface p-5">
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+    <div className="frame">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
         <div>
-          <h3 className="section-title text-sm">Price History</h3>
+          <span className="section-title">Price history</span>
           {stats && (
             <div className="flex items-baseline gap-3 mt-1 flex-wrap">
-              <span className="text-2xl font-bold font-mono">${stats.last.toFixed(2)}</span>
+              <span className="text-xl font-semibold tabular-nums">${stats.last.toFixed(2)}</span>
               <span
-                className={`text-sm font-mono inline-flex items-center gap-1 ${
+                className={`inline-flex items-center gap-1 text-[13px] tabular-nums ${
                   headerPositive ? "delta-positive" : "delta-negative"
                 }`}
               >
@@ -489,18 +551,19 @@ export function StockPriceChart({
         </div>
         <div className="flex items-center gap-2">
           {costBasis.length > 0 && (
-            <Toggle
-              size="sm"
-              variant="outline"
+            <button
+              type="button"
+              aria-pressed={showBasis}
               aria-label="Estimated cost basis"
               title="Estimated institutional cost basis"
-              pressed={showBasis}
-              onPressedChange={setShowBasis}
-              className="gap-1.5 text-xs"
+              onClick={() => setShowBasis((v) => !v)}
+              className={`inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-xs transition-colors hover:bg-accent ${
+                showBasis ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
             >
               <Layers className="h-3.5 w-3.5" style={{ color: COST_BASIS_COLOR }} />
               Cost basis
-            </Toggle>
+            </button>
           )}
           <SegmentedControl
             size="sm"
@@ -521,302 +584,182 @@ export function StockPriceChart({
             aria-label="Time range"
             value={range}
             onValueChange={(v) => setRange(v)}
-            options={RANGES.map((r) => ({
-              value: r.key,
-              label: <span className="font-mono">{r.label}</span>,
+            options={RANGE_KEYS.map((key) => ({
+              value: key,
+              label: <span className="tabular-nums">{RANGE_INFO[key].label}</span>,
             }))}
           />
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="h-[320px] w-full select-none cursor-crosshair"
-        onDragStart={(e) => e.preventDefault()}
-        style={{ touchAction: "none" }}
-      >
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground gap-2 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading price history…
-          </div>
-        ) : isError || series.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            Price history unavailable for {ticker}.
-          </div>
-        ) : !size ? null : mode === "candles" ? (
-          <ComposedChart
-            width={size.width}
-            height={size.height}
-            data={candleSeries}
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-          >
-            <XAxis
-              dataKey="date"
-              tickFormatter={fmtDateShort}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              minTickGap={48}
-            />
-            <YAxis
-              yAxisId="price"
-              tickFormatter={fmtCurrency}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={56}
-              domain={yDomain ?? ["auto", "auto"]}
-            />
-            {holdingsDomain && (
+      <div className="p-3">
+        <div
+          ref={containerRef}
+          className="h-[320px] w-full cursor-crosshair select-none"
+          onDragStart={(e) => e.preventDefault()}
+          style={{ touchAction: "none" }}
+        >
+          {isLoading ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground gap-2 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading price history…
+            </div>
+          ) : isError || series.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              Price history unavailable for {ticker}.
+            </div>
+          ) : !size ? null : mode === "candles" ? (
+            <ComposedChart
+              width={size.width}
+              height={size.height}
+              data={candleSeries}
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+            >
+              <CartesianGrid yAxisId="price" stroke={GRID} strokeWidth={1} vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtDateShort}
+                tick={AXIS_TICK}
+                axisLine={false}
+                tickLine={false}
+                minTickGap={48}
+              />
               <YAxis
-                yAxisId="holdings"
-                orientation="right"
-                tickFormatter={formatValueShort}
-                tick={{ fill: HOLDINGS_COLOR, fontSize: 11 }}
+                yAxisId="price"
+                tickFormatter={fmtCurrency}
+                tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
                 width={56}
-                domain={holdingsDomain}
+                domain={yDomain ?? ["auto", "auto"]}
               />
-            )}
-            {stats && !selectionStats && (
-              <ReferenceLine
+              {holdingsAxis}
+              {stats && !selectionStats && (
+                <ReferenceLine
+                  yAxisId="price"
+                  y={stats.first}
+                  stroke={NEUTRAL}
+                  strokeDasharray="2 4"
+                  strokeOpacity={0.4}
+                />
+              )}
+              {selectionStats && (
+                <>
+                  <ReferenceArea
+                    yAxisId="price"
+                    x1={selectionStats.start.date}
+                    x2={selectionStats.end.date}
+                    fill={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    fillOpacity={0.08}
+                  />
+                  <ReferenceLine
+                    yAxisId="price"
+                    x={selectionStats.start.date}
+                    stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    strokeDasharray="2 4"
+                    strokeOpacity={0.6}
+                  />
+                  <ReferenceLine
+                    yAxisId="price"
+                    x={selectionStats.end.date}
+                    stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    strokeDasharray="2 4"
+                    strokeOpacity={0.6}
+                  />
+                </>
+              )}
+              <Tooltip cursor={CURSOR} content={renderTooltip} />
+              {costBasisLayers}
+              <Bar
                 yAxisId="price"
-                y={stats.first}
-                stroke="hsl(var(--muted-foreground))"
-                strokeDasharray="3 3"
-                strokeOpacity={0.4}
-              />
-            )}
-            {selectionStats && (
-              <>
-                <ReferenceArea
-                  yAxisId="price"
-                  x1={selectionStats.start.date}
-                  x2={selectionStats.end.date}
-                  fill={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  fillOpacity={0.08}
-                />
-                <ReferenceLine
-                  yAxisId="price"
-                  x={selectionStats.start.date}
-                  stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.6}
-                />
-                <ReferenceLine
-                  yAxisId="price"
-                  x={selectionStats.end.date}
-                  stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.6}
-                />
-              </>
-            )}
-            <Tooltip
-              cursor={{
-                stroke: "hsl(var(--muted-foreground))",
-                strokeOpacity: 0.4,
-                strokeDasharray: "3 3",
-              }}
-              content={renderTooltip}
-            />
-            {showBasis && basisExtent && (
-              <>
-                <Area
-                  yAxisId="price"
-                  type="stepAfter"
-                  dataKey="costBasisRange"
-                  name="Estimated cost basis"
-                  stroke="none"
-                  fill={COST_BASIS_COLOR}
-                  fillOpacity={0.16}
-                  connectNulls={false}
-                  activeDot={false}
-                  isAnimationActive={false}
-                />
-                <Line
-                  yAxisId="price"
-                  type="stepAfter"
-                  dataKey="costBasisMid"
-                  name="Estimated cost basis"
-                  stroke={COST_BASIS_COLOR}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  strokeOpacity={0.9}
-                  dot={false}
-                  activeDot={false}
-                  connectNulls={false}
-                  isAnimationActive={false}
-                />
-              </>
-            )}
-            <Bar
-              yAxisId="price"
-              dataKey="range"
-              shape={(props: CandleShapeProps) => <Candlestick {...props} />}
-              isAnimationActive={false}
-            />
-            {holdingsDomain && (
-              <Line
-                yAxisId="holdings"
-                type="stepAfter"
-                dataKey="holdingsShares"
-                name="Total shares held"
-                stroke={HOLDINGS_COLOR}
-                strokeWidth={1.75}
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
+                dataKey="range"
+                shape={(props: CandleShapeProps) => <Candlestick {...props} />}
                 isAnimationActive={false}
               />
-            )}
-          </ComposedChart>
-        ) : (
-          <ComposedChart
-            width={size.width}
-            height={size.height}
-            data={overlaidSeries}
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-          >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.32} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="date"
-              tickFormatter={fmtDateShort}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              minTickGap={48}
-            />
-            <YAxis
-              yAxisId="price"
-              tickFormatter={fmtCurrency}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={56}
-              domain={yDomain ?? ["auto", "auto"]}
-            />
-            {holdingsDomain && (
+              {holdingsLine}
+            </ComposedChart>
+          ) : (
+            <ComposedChart
+              width={size.width}
+              height={size.height}
+              data={overlaidSeries}
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+            >
+              <CartesianGrid yAxisId="price" stroke={GRID} strokeWidth={1} vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtDateShort}
+                tick={AXIS_TICK}
+                axisLine={false}
+                tickLine={false}
+                minTickGap={48}
+              />
               <YAxis
-                yAxisId="holdings"
-                orientation="right"
-                tickFormatter={formatValueShort}
-                tick={{ fill: HOLDINGS_COLOR, fontSize: 11 }}
+                yAxisId="price"
+                tickFormatter={fmtCurrency}
+                tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
                 width={56}
-                domain={holdingsDomain}
+                domain={yDomain ?? ["auto", "auto"]}
               />
-            )}
-            {stats && !selectionStats && (
-              <ReferenceLine
+              {holdingsAxis}
+              {stats && !selectionStats && (
+                <ReferenceLine
+                  yAxisId="price"
+                  y={stats.first}
+                  stroke={NEUTRAL}
+                  strokeDasharray="2 4"
+                  strokeOpacity={0.4}
+                />
+              )}
+              {selectionStats && (
+                <>
+                  <ReferenceArea
+                    yAxisId="price"
+                    x1={selectionStats.start.date}
+                    x2={selectionStats.end.date}
+                    fill={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    fillOpacity={0.12}
+                  />
+                  <ReferenceLine
+                    yAxisId="price"
+                    x={selectionStats.start.date}
+                    stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    strokeDasharray="2 4"
+                    strokeOpacity={0.6}
+                  />
+                  <ReferenceLine
+                    yAxisId="price"
+                    x={selectionStats.end.date}
+                    stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
+                    strokeDasharray="2 4"
+                    strokeOpacity={0.6}
+                  />
+                </>
+              )}
+              <Tooltip cursor={CURSOR} content={renderTooltip} />
+              {costBasisLayers}
+              <Area
                 yAxisId="price"
-                y={stats.first}
-                stroke="hsl(var(--muted-foreground))"
-                strokeDasharray="3 3"
-                strokeOpacity={0.4}
-              />
-            )}
-            {selectionStats && (
-              <>
-                <ReferenceArea
-                  yAxisId="price"
-                  x1={selectionStats.start.date}
-                  x2={selectionStats.end.date}
-                  fill={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  fillOpacity={0.12}
-                />
-                <ReferenceLine
-                  yAxisId="price"
-                  x={selectionStats.start.date}
-                  stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.6}
-                />
-                <ReferenceLine
-                  yAxisId="price"
-                  x={selectionStats.end.date}
-                  stroke={selectionStats.positive ? UP_COLOR : DOWN_COLOR}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.6}
-                />
-              </>
-            )}
-            <Tooltip
-              cursor={{
-                stroke: "hsl(var(--muted-foreground))",
-                strokeOpacity: 0.4,
-                strokeDasharray: "3 3",
-              }}
-              content={renderTooltip}
-            />
-            {showBasis && basisExtent && (
-              <>
-                <Area
-                  yAxisId="price"
-                  type="stepAfter"
-                  dataKey="costBasisRange"
-                  name="Estimated cost basis"
-                  stroke="none"
-                  fill={COST_BASIS_COLOR}
-                  fillOpacity={0.16}
-                  connectNulls={false}
-                  activeDot={false}
-                  isAnimationActive={false}
-                />
-                <Line
-                  yAxisId="price"
-                  type="stepAfter"
-                  dataKey="costBasisMid"
-                  name="Estimated cost basis"
-                  stroke={COST_BASIS_COLOR}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  strokeOpacity={0.9}
-                  dot={false}
-                  activeDot={false}
-                  connectNulls={false}
-                  isAnimationActive={false}
-                />
-              </>
-            )}
-            <Area
-              yAxisId="price"
-              type="monotone"
-              dataKey="close"
-              stroke={lineColor}
-              strokeWidth={2}
-              fill={`url(#${gradientId})`}
-              animationDuration={400}
-            />
-            {holdingsDomain && (
-              <Line
-                yAxisId="holdings"
-                type="stepAfter"
-                dataKey="holdingsShares"
-                name="Total shares held"
-                stroke={HOLDINGS_COLOR}
-                strokeWidth={1.75}
+                type="monotone"
+                dataKey="close"
+                stroke={lineColor}
+                strokeWidth={2}
+                fill="none"
                 dot={false}
-                activeDot={false}
-                connectNulls={false}
-                isAnimationActive={false}
+                isAnimationActive={chartAnimationActive()}
+                animationDuration={400}
               />
-            )}
-          </ComposedChart>
-        )}
+              {holdingsLine}
+            </ComposedChart>
+          )}
+        </div>
       </div>
     </div>
   );

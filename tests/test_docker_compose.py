@@ -1,5 +1,5 @@
 """
-Regression tests for docker-compose runtime compatibility.
+Regression tests for compose runtime compatibility.
 """
 
 import re
@@ -18,15 +18,15 @@ class TestDockerCompose(unittest.TestCase):
         the original Postgres 16 service. Major bumps need an explicit data
         migration plan instead of an automatic dependency update.
         """
-        compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
+        compose_text = Path("compose.yaml").read_text(encoding="utf-8")
         image_match = re.search(
             r"^\s*image:\s*postgres:(\d+)-alpine\s*$", compose_text, re.MULTILINE
         )
-        self.assertIsNotNone(image_match, "Expected a postgres alpine image in docker-compose.yml")
+        self.assertIsNotNone(image_match, "Expected a postgres alpine image in compose.yaml")
         self.assertEqual(
             int(image_match.group(1)),
             16,
-            "docker-compose.yml should stay pinned to Postgres 16 until the volume upgrade path is implemented",
+            "compose.yaml should stay pinned to Postgres 16 until the volume upgrade path is implemented",
         )
 
 

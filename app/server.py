@@ -1,3 +1,7 @@
+"""
+FastAPI application: middleware, router wiring, health probe and SPA/static serving.
+"""
+
 import os
 
 # Fix terminal width for output streamed to the web UI
@@ -20,6 +24,7 @@ from app.api.api_keys import router as api_keys_router
 from app.api.common import limiter
 from app.api.data import router as data_router
 from app.api.me import router as me_router
+from app.api.observability import RequestContextMiddleware
 from app.api.paths import _FRONTEND_ROOT, _safe_frontend_path
 from app.api.settings import router as settings_router
 
@@ -34,10 +39,19 @@ from app.api.starred import router as starred_router
 from app.auth import include_routers_for_auth
 
 
+def _is_publicly_known_secret(value: str) -> bool:
+    """
+    Detect a signing secret that anyone can read off the repository: the dev
+    default baked into the code, or a placeholder copied from `.env.example`.
+    """
+    normalized = value.strip()
+    return normalized.startswith(("dev-only", "REPLACE_ME", "your_"))
+
+
 def _validate_deployment_secrets() -> None:
     """
     In a hardened deployment (secure cookies → HTTPS → real deploy), refuse to
-    start with the dev-default token-signing secrets: they would let anyone forge
+    start with publicly-known token-signing secrets: they would let anyone forge
     verification / password-reset tokens. No effect in local/dev (COOKIE_SECURE
     unset), so the local single-user tool keeps working with the defaults.
     """
@@ -47,18 +61,23 @@ def _validate_deployment_secrets() -> None:
     if not COOKIE_SECURE:
         return
 
-    weak = [
-        name
-        for name, value in (
-            ("RESET_PASSWORD_TOKEN_SECRET", RESET_PASSWORD_TOKEN_SECRET),
-            ("VERIFICATION_TOKEN_SECRET", VERIFICATION_TOKEN_SECRET),
-        )
-        if value.startswith("dev-only")
-    ]
+    secrets_by_name = (
+        ("RESET_PASSWORD_TOKEN_SECRET", RESET_PASSWORD_TOKEN_SECRET),
+        ("VERIFICATION_TOKEN_SECRET", VERIFICATION_TOKEN_SECRET),
+    )
+    # A value copied from .env.example overrides the dev default, so the
+    # "dev-only" prefix alone would wave it through despite being just as public.
+    weak = [name for name, value in secrets_by_name if _is_publicly_known_secret(value)]
     if weak:
         raise RuntimeError(
-            "COOKIE_SECURE is set (production posture) but dev-default signing secrets "
+            "COOKIE_SECURE is set (production posture) but publicly-known signing secrets "
             f"are still in use: {weak}. Set them via environment variables before deploying."
+        )
+
+    if RESET_PASSWORD_TOKEN_SECRET == VERIFICATION_TOKEN_SECRET:
+        raise RuntimeError(
+            "RESET_PASSWORD_TOKEN_SECRET and VERIFICATION_TOKEN_SECRET must differ: "
+            "sharing one key lets a verification token be replayed as a password reset."
         )
 
 
@@ -113,6 +132,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        """
+        Forward the request and stamp the security headers on its response.
+        """
         response = await call_next(request)
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -145,6 +167,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 app.add_middleware(SlowAPIMiddleware)
 
+# Added last so it is outermost: every response, including rate-limit and CORS
+# rejections, gets a request id, an access line and a metrics sample.
+app.add_middleware(RequestContextMiddleware)
+
 
 # ── Routers ─────────────────────────────────────────────────────────────────
 # Domain endpoints live in app/api/*; server.py keeps only app wiring, the
@@ -170,13 +196,39 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": get_version()}
 
 
+@app.get("/metrics", include_in_schema=False)
+@limiter.exempt
+async def metrics() -> Response:
+    """
+    Prometheus scrape endpoint.
+    """
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 # ── Static frontend ────────────────────────────────────────────────────────────
+
+
+def _is_spa_route(path: str) -> bool:
+    """
+    True only for extension-less, non-API paths, i.e. React Router routes.
+
+    A missing static file (a stale hashed bundle after a rebuild) must 404 rather
+    than receive index.html: the browser would parse HTML as a module, the page
+    stays blank and nothing shows up in the network log.
+    """
+    if path.startswith(("/api/", "/database/")):
+        return False
+    return "." not in path.rsplit("/", 1)[-1]
 
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> Response:
-    # For 404s on non-API routes, serve the SPA index.html (React Router handles routing)
-    if exc.status_code == 404 and not request.url.path.startswith(("/api/", "/database/")):
+    """
+    Serve the SPA shell for 404s on client-side routes; JSON error body otherwise.
+    """
+    if exc.status_code == 404 and _is_spa_route(request.url.path):
         index = _FRONTEND_ROOT / "index.html"
         if index.exists():
             return FileResponse(str(index))
@@ -188,13 +240,20 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 @app.get("/{full_path:path}")
 @limiter.exempt
 async def serve_spa(full_path: str) -> FileResponse:
+    """
+    Serve a built frontend asset, or index.html for React Router routes.
+    """
     try:
         if full_path:
             file_path = _safe_frontend_path(full_path)
             if file_path.exists() and file_path.is_file():
                 return FileResponse(str(file_path))
-    except (HTTPException, ValueError, OSError):
+    except HTTPException, ValueError, OSError:
         pass
+
+    # Static assets never fall back: a missing file is a 404, not the SPA shell.
+    if not _is_spa_route("/" + full_path):
+        raise HTTPException(status_code=404, detail="Not Found")
 
     # Fallback to index.html for SPA routes (React Router handles the rest)
     index = _FRONTEND_ROOT / "index.html"

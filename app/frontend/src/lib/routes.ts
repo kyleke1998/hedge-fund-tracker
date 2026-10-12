@@ -9,7 +9,9 @@ export const ROUTES = {
   quarterly: "/quarterly",
   strategyPerformance: "/performance",
   regime: "/regime",
+  fundRanking: "/ranking",
   learn: "/learn",
+  about: "/about",
   funds: "/funds",
   stocks: "/stocks",
   /** Base segment for a single stock page; use `stockPath()` for a full link. */
@@ -20,6 +22,12 @@ export const ROUTES = {
   aiSettings: "/ai-settings",
   database: "/database",
 } as const;
+
+/**
+ * Deep link to one FAQ entry on /learn. `id` is a `FaqItem.id` from
+ * src/lib/faqContent.ts; the page opens, scrolls to and focuses that item.
+ */
+export const learnItem = (id: string) => `${ROUTES.learn}#${id}`;
 
 /** Link to a single stock's analysis page. */
 export const stockPath = (ticker: string) => `${ROUTES.stock}/${encodeURIComponent(ticker)}`;

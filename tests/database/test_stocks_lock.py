@@ -29,6 +29,28 @@ class TestStocksLock(unittest.TestCase):
             self.assertTrue(self.lock_path.exists())
         self.assertFalse(self.lock_path.exists())
 
+    def test_nested_acquisition_times_out_instead_of_deadlocking(self):
+        """
+        Re-entering the non-reentrant in-process lock raises TimeoutError within the timeout.
+        """
+        started = time.monotonic()
+        with stocks_lock(timeout=0.3), self.assertRaises(TimeoutError), stocks_lock(timeout=0.3):
+            pass
+        self.assertLess(time.monotonic() - started, 5)
+
+    def test_nested_file_lock_times_out_instead_of_deadlocking(self):
+        """
+        A nested file_lock on the same path raises TimeoutError instead of hanging.
+        """
+        from app.database.locks import file_lock
+
+        target = Path(self._tmp.name) / "non_quarterly.csv"
+        started = time.monotonic()
+        with file_lock(target, timeout=0.3), self.assertRaises(TimeoutError):
+            with file_lock(target, timeout=0.3):
+                pass
+        self.assertLess(time.monotonic() - started, 5)
+
     def test_stale_lock_is_reclaimed_without_leftovers(self):
         """
         A lock file older than the staleness threshold is reclaimed, the lock
@@ -56,6 +78,27 @@ class TestStocksLock(unittest.TestCase):
                 pass
 
         self.assertTrue(self.lock_path.exists())
+
+
+class TestDbFolderAnchoring(unittest.TestCase):
+    def test_default_db_folder_is_repo_absolute_regardless_of_cwd(self):
+        """
+        The default DB_FOLDER names <repo>/database even when the process runs elsewhere.
+        """
+        import importlib
+
+        repo_db = (Path(__file__).resolve().parents[2] / "database").resolve()
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            try:
+                reloaded = importlib.reload(_db)
+                folder = Path(reloaded.DB_FOLDER)
+            finally:
+                os.chdir(original_cwd)
+                importlib.reload(_db)
+        self.assertTrue(folder.is_absolute())
+        self.assertEqual(folder.resolve(), repo_db)
 
 
 if __name__ == "__main__":

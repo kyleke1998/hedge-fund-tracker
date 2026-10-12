@@ -4,10 +4,68 @@ from unittest.mock import patch
 import pandas as pd
 
 from app.scraper.xml_processor import (
+    UnparseableHoldingsError,
     xml_to_dataframe_4,
     xml_to_dataframe_13f,
     xml_to_dataframe_schedule,
 )
+
+
+def _info(name: str, cusip: str, value: int, shares: int) -> str:
+    """
+    One 13F infoTable row as XML.
+    """
+    return (
+        f"<infotable><nameofissuer>{name}</nameofissuer><cusip>{cusip}</cusip>"
+        f"<value>{value}</value><shrsorprnamt><sshprnamt>{shares}</sshprnamt>"
+        "</shrsorprnamt></infotable>"
+    )
+
+
+class TestFilingCorrections(unittest.TestCase):
+    """
+    A filer's CUSIP mistakes are fixed from the corrections registry at parse time.
+    """
+
+    XML = (
+        "<informationtable>"
+        + _info("UR-ENERGY INC", "N85083108", 18420409, 13252093)
+        + _info("VISTRA CORP", "91688R108", 161330, 1000)
+        + _info("TERRA INNOVATUM GLOBAL NV", "92840M102", 9039113, 1956518)
+        + "</informationtable>"
+    )
+    CORRECTIONS = {
+        ("N85083108", "UR-ENERGY INC"): "91688R108",
+        ("91688R108", "VISTRA CORP"): "92840M102",
+        ("92840M102", "TERRA INNOVATUM GLOBAL NV"): "N85083108",
+    }
+
+    def test_rotated_cusips_are_put_back_on_their_issuers(self):
+        """
+        Each row takes the CUSIP of the company it names.
+        """
+        df = xml_to_dataframe_13f(self.XML, corrections=self.CORRECTIONS)
+        by_cusip = dict(zip(df["CUSIP"], df["Company"], strict=True))
+        self.assertEqual(by_cusip["91688R108"], "UR-ENERGY INC")
+        self.assertEqual(by_cusip["92840M102"], "VISTRA CORP")
+        self.assertEqual(by_cusip["N85083108"], "TERRA INNOVATUM GLOBAL NV")
+
+    def test_correction_needs_the_filed_name_to_match(self):
+        """
+        A registry entry never touches a different row that shares the CUSIP.
+        """
+        df = xml_to_dataframe_13f(
+            self.XML, corrections={("91688R108", "SOMETHING ELSE"): "92840M102"}
+        )
+        self.assertIn("91688R108", set(df["CUSIP"]))
+
+    def test_without_corrections_the_filing_is_kept_as_filed(self):
+        """
+        No registry, no change: the CSV stays a faithful record of the filing.
+        """
+        df = xml_to_dataframe_13f(self.XML)
+        by_cusip = dict(zip(df["CUSIP"], df["Company"], strict=True))
+        self.assertEqual(by_cusip["91688R108"], "VISTRA CORP")
 
 
 class TestXmlProcessor(unittest.TestCase):
@@ -177,6 +235,59 @@ class TestXmlProcessor(unittest.TestCase):
         self.assertEqual(df["Company"][0], "Good Co")
         self.assertTrue(any("2" in message for message in captured.output))
 
+    def test_xml_to_dataframe_13f_without_any_entry_is_an_error(self):
+        """
+        A table with no entry at all (a wrong or truncated document) cannot be told apart from
+        a fund that closed everything, so it must not parse to an empty frame. A genuinely empty
+        filing carries a zeroed placeholder entry instead.
+        """
+        with self.assertRaises(UnparseableHoldingsError):
+            xml_to_dataframe_13f("<html><body>Service unavailable</body></html>")
+
+    def test_xml_to_dataframe_13f_with_only_unparseable_positions_is_an_error(self):
+        """
+        When every real position has an unreadable number, the filing declares holdings we
+        failed to read: saving the quarter as all CLOSE would invent a liquidation.
+        """
+        xml_content = """
+        <informationtable>
+            <infotable>
+                <nameofissuer>Bad Value Co</nameofissuer>
+                <cusip>CUSIP2</cusip>
+                <value>12abc</value>
+                <shrsorprnamt><sshprnamt>1000</sshprnamt></shrsorprnamt>
+            </infotable>
+            <infotable>
+                <nameofissuer>Bad Shares Co</nameofissuer>
+                <cusip>CUSIP3</cusip>
+                <value>5000000</value>
+                <shrsorprnamt><sshprnamt>garbage</sshprnamt></shrsorprnamt>
+            </infotable>
+        </informationtable>
+        """
+
+        with self.assertRaises(UnparseableHoldingsError):
+            xml_to_dataframe_13f(xml_content)
+
+    def test_xml_to_dataframe_13f_with_only_option_rows_is_empty_not_an_error(self):
+        """
+        Option rows are dropped at parse time by design: a filing made only of them is a valid
+        empty long book, not a parse failure.
+        """
+        xml_content = """
+        <informationtable>
+            <infotable>
+                <nameofissuer>Option Co</nameofissuer>
+                <cusip>CUSIP9</cusip>
+                <value>5000000</value>
+                <shrsorprnamt><sshprnamt>1000</sshprnamt></shrsorprnamt>
+                <putcall>Put</putcall>
+            </infotable>
+        </informationtable>
+        """
+
+        self.assertTrue(xml_to_dataframe_13f(xml_content).empty)
+
 
 class TestXmlToDataframeSchedule(unittest.TestCase):
     SCHEDULE_XML = """
@@ -192,6 +303,7 @@ class TestXmlToDataframeSchedule(unittest.TestCase):
           <reportingPersonName>Big Fund LP</reportingPersonName>
           <rptOwnerCIK>0007654321</rptOwnerCIK>
           <aggregateAmountOwned>500000</aggregateAmountOwned>
+          <classPercent>12.7</classPercent>
         </coverPageHeaderReportingPersonDetails>
       </formData>
     </edgarSubmission>
@@ -213,6 +325,18 @@ class TestXmlToDataframeSchedule(unittest.TestCase):
         self.assertEqual(row["Owner_CIK"], "0007654321")
         self.assertEqual(row["Owner"], "BIG FUND LP")
         self.assertEqual(row["Date"], pd.Timestamp("2026-03-15"))
+        self.assertEqual(row["Class_Pct"], 12.7)
+
+    def test_class_percent_is_absent_when_not_reported(self):
+        """
+        Older schedule schemas omit the percentage of class; it must parse as
+        missing rather than zero, which would read as a real 0% stake.
+        """
+        xml = self.SCHEDULE_XML.replace("<classPercent>12.7</classPercent>", "")
+
+        df = xml_to_dataframe_schedule(xml)
+
+        self.assertTrue(pd.isna(df.iloc[0]["Class_Pct"]))
 
     NEW_SCHEMA_XML = """
     <edgarSubmission>
@@ -356,6 +480,97 @@ class TestXmlToDataframe4(unittest.TestCase):
         df = xml_to_dataframe_4(xml)
 
         self.assertEqual(df.iloc[0]["Shares"], 15000)
+
+    @staticmethod
+    def _with_titled_holding(xml, main_title, extra_title, extra_shares, before=False):
+        """
+        Titles the base transaction and adds a direct holding of another security title,
+        placed before or after it in the non-derivative table.
+        """
+        xml = xml.replace(
+            "<nonDerivativeTransaction>",
+            f"<nonDerivativeTransaction><securityTitle><value>{main_title}</value></securityTitle>",
+        )
+        holding = f"""
+            <nonDerivativeHolding>
+              <securityTitle><value>{extra_title}</value></securityTitle>
+              <postTransactionAmounts>
+                <sharesOwnedFollowingTransaction><value>{extra_shares}</value></sharesOwnedFollowingTransaction>
+              </postTransactionAmounts>
+              <ownershipNature>
+                <directOrIndirectOwnership><value>I</value></directOrIndirectOwnership>
+                <natureOfOwnership><value>By Fund</value></natureOfOwnership>
+              </ownershipNature>
+            </nonDerivativeHolding>
+            """
+        if before:
+            return xml.replace("<nonDerivativeTable>", "<nonDerivativeTable>" + holding)
+        return xml.replace("</nonDerivativeTable>", holding + "</nonDerivativeTable>")
+
+    def test_other_security_classes_are_not_summed(self, _assign):
+        """
+        A preferred holding reported alongside common stock is a different
+        security: only the common position counts.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Common Stock", "Series A Preferred Stock", 5000
+        )
+
+        self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 12000)
+
+    def test_common_stock_wins_even_when_listed_after_another_class(self, _assign):
+        """
+        The common position is chosen regardless of the order of the rows.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Common Stock", "Convertible Preferred Stock", 5000, before=True
+        )
+
+        self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 12000)
+
+    def test_distinct_common_classes_prefer_class_a(self, _assign):
+        """
+        Two common classes are distinct securities: Class A is kept even when an
+        (often unlisted) Class B is listed first, and the ambiguity is logged.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Class A Common Stock", "Class B Common Stock", 3000, before=True
+        )
+
+        with self.assertLogs("app.scraper.xml_processor", level="WARNING"):
+            self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 12000)
+
+    def test_undesignated_common_class_wins_over_a_designated_one(self, _assign):
+        """
+        Plain common stock (no class designator) is preferred over a lettered class.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Common Stock", "Class B Common Stock", 3000, before=True
+        )
+
+        with self.assertLogs("app.scraper.xml_processor", level="WARNING"):
+            self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 12000)
+
+    def test_without_class_a_the_first_common_class_is_kept(self, _assign):
+        """
+        With neither plain common nor Class A, the first common class listed is kept.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Class B Common Stock", "Class C Common Stock", 3000
+        )
+
+        self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 12000)
+
+    def test_title_wording_variants_of_one_class_are_summed(self, _assign):
+        """
+        The same common class written with and without its par value is one
+        security, so its direct and indirect positions are still summed.
+        """
+        xml = self._with_titled_holding(
+            self.FORM4_XML, "Common Stock", "Common Stock, par value $0.01", 3000
+        )
+
+        self.assertEqual(xml_to_dataframe_4(xml).iloc[0]["Shares"], 15000)
 
 
 if __name__ == "__main__":

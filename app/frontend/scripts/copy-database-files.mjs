@@ -17,4 +17,6 @@ export const staticFiles = [
   "regime.csv",
   "correlation.csv",
   "momentum.csv",
+  "fund_performance.csv",
+  "filing_anomalies.csv",
 ];

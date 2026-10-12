@@ -5,26 +5,73 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from dotenv import load_dotenv
-from openai import BadRequestError, OpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    BadRequestError,
+    OpenAI,
+    RateLimitError,
+)
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from app.ai.clients.base_client import AIClient
+from app.ai.clients.base_client import (
+    AIClient,
+    InvalidAIResponseError,
+    ReasoningLevel,
+    StructuredMode,
+    llm_retry_hook,
+)
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
+def _response_format(mode: StructuredMode | None, schema: dict | None) -> dict | None:
+    """
+    The ``response_format`` request field for a structured-output mode, or None.
+    """
+    if mode == "schema":
+        return {
+            "type": "json_schema",
+            "json_schema": {"name": "response", "schema": schema, "strict": True},
+        }
+    if mode == "json":
+        return {"type": "json_object"}
+    return None
+
+
 # Per-request timeout, so a stalled model fails fast (the OpenAI SDK default is 600s).
 REQUEST_TIMEOUT_S = 90.0
 
-# Reasoning models (e.g. gpt-oss) spend a hidden token budget "thinking" before
-# emitting content; without a bound they can exhaust their output tokens with
-# no visible answer. "low" is enough for this app's short, structured prompts.
-DEFAULT_REASONING_EFFORT = "low"
-
 
 def _identity(model: str) -> str:
-    """Default model-name transform: return the model id unchanged."""
+    """
+    Default model-name transform: return the model id unchanged.
+    """
     return model
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """
+    Whether an API error is worth retrying: connection/timeout, rate limit or a 5xx.
+    """
+    if isinstance(exc, (APIConnectionError, RateLimitError)):
+        return True
+    return isinstance(exc, APIStatusError) and exc.status_code >= 500
+
+
+def _is_schema_validation_failure(exc: APIStatusError) -> bool:
+    """
+    Whether the provider rejected the model's output for not matching the JSON schema.
+    """
+    return exc.status_code == 400 and "json_validate_failed" in str(exc).lower()
+
+
+def _refuses_the_model(exc: APIStatusError) -> bool:
+    """
+    Whether a provider answered 429 or 5xx, which another model on the same endpoint may avoid.
+    """
+    return exc.status_code == 429 or exc.status_code >= 500
 
 
 @dataclass(frozen=True)
@@ -57,10 +104,9 @@ class OpenAIClient(AIClient):
     """
 
     CONFIG: OpenAIProviderConfig
-
-    # (base_url, model) pairs that have already rejected reasoning_effort, so
-    # repeat calls to a known non-reasoning model skip the failing round trip.
-    _reasoning_unsupported: ClassVar[set[tuple[str, str]]] = set()
+    SUPPORTED_STRUCTURED_MODES: ClassVar[tuple[StructuredMode, ...]] = ("schema", "json", "prompt")
+    # Model that repeats a request the provider refused with 429 or 5xx (None = no fallback).
+    FALLBACK_MODEL: ClassVar[str | None] = None
 
     def __init__(self, model: str | None = None, api_key: str | None = None):
         """
@@ -95,6 +141,7 @@ class OpenAIClient(AIClient):
             timeout=REQUEST_TIMEOUT_S,
         )
         self.model = model
+        self._answered_by: str | None = None
 
     def get_model_name(self) -> str:
         """
@@ -102,56 +149,151 @@ class OpenAIClient(AIClient):
         """
         return self.CONFIG.model_name_transform(self.model)
 
+    def _answering_model_name(self) -> str:
+        """
+        Names the model that actually answered, which is FALLBACK_MODEL after a refusal.
+        """
+        return self.CONFIG.model_name_transform(self._answered_by or self.model)
+
     @retry(
         wait=wait_exponential(multiplier=2, min=1, max=8),
         stop=stop_after_attempt(3),
-        before_sleep=lambda rs: logger.progress(
-            f"Retrying in {rs.next_action.sleep:.2f}s... (Attempt #{rs.attempt_number})"  # type: ignore[union-attr]
-        ),
+        retry=retry_if_exception(_is_transient),
+        before_sleep=llm_retry_hook("Retrying in %.2fs... (Attempt #%d)"),
     )
-    def _generate_content_impl(self, prompt: str, **kwargs) -> str:
+    def _generate_content_impl(
+        self,
+        prompt: str,
+        reasoning: ReasoningLevel | None = None,
+        response_schema: dict | None = None,
+        **kwargs,
+    ) -> str:
+        """
+        Completes the request on ``self.model``; a 429 or 5xx there is repeated on FALLBACK_MODEL
+        within the same call (the fallback is per call: ``self.model`` is restored afterwards).
+        """
+        self._answered_by = None
+        try:
+            return self._complete(prompt, reasoning, response_schema, **kwargs)
+        except APIStatusError as exc:
+            fallback = self.FALLBACK_MODEL
+            if fallback is None or self.model == fallback or not _refuses_the_model(exc):
+                raise
+            logger.warning(
+                "%s: %s refused the request (%s), falling back to %s",
+                self.__class__.__name__,
+                self.model,
+                exc.status_code,
+                fallback,
+            )
+            primary, self.model, self._answered_by = self.model, fallback, fallback
+            try:
+                return self._complete(prompt, reasoning, response_schema, **kwargs)
+            finally:
+                self.model = primary
+
+    def _complete(
+        self,
+        prompt: str,
+        reasoning: ReasoningLevel | None = None,
+        response_schema: dict | None = None,
+        **kwargs,
+    ) -> str:
         """
         Generate content from an OpenAI-compatible API via streaming.
 
         Streaming surfaces time-to-first-token and returns the accumulated text.
-        Accepts optional keyword arguments for the completion call. Reasoning
-        models get a bounded ``reasoning_effort`` by default; if the model
-        rejects the parameter, the call is transparently retried without it
-        (see ``_reasoning_unsupported``).
+        Accepts optional keyword arguments for the completion call. ``reasoning``
+        maps to ``reasoning_effort``; a model rejecting it is retried without it
+        through the shared flow in AIClient. ``response_schema`` maps to
+        ``response_format`` (strict json_schema, then json_object), degrading
+        through the shared structured-output flow.
         """
-        extra_body = dict(self.CONFIG.extra_body)
-        cache_key = (self.CONFIG.base_url, self.model)
-        if cache_key not in self._reasoning_unsupported:
-            extra_body.setdefault("reasoning_effort", DEFAULT_REASONING_EFFORT)
+        base_extra_body = dict(self.CONFIG.extra_body)
         if "extra_body" in kwargs:
-            extra_body.update(kwargs.pop("extra_body"))
+            base_extra_body.update(kwargs.pop("extra_body"))
 
         model_name = self.get_model_name()
         start = time.perf_counter()
 
-        try:
-            try:
-                return self._stream_completion(prompt, extra_body, model_name, start, **kwargs)
-            except BadRequestError as exc:
-                if "reasoning_effort" not in extra_body or "reasoning_effort" not in str(exc):
-                    raise
-                logger.warning(
-                    "%s: %s does not support reasoning_effort, retrying without it",
-                    self.__class__.__name__,
-                    self.model,
+        def _send_structured(mode_prompt: str, mode: StructuredMode | None) -> str:
+            """
+            Sends one completion in ``mode`` through the reasoning fallback.
+            """
+            request_kwargs = dict(kwargs)
+            response_format = _response_format(mode, response_schema)
+            if response_format is not None:
+                request_kwargs["response_format"] = response_format
+
+            def _send(level: ReasoningLevel | None) -> str:
+                """
+                Streams one completion, with reasoning_effort unless ``level`` is None.
+                """
+                extra_body = dict(base_extra_body)
+                if level is None:
+                    extra_body.pop("reasoning_effort", None)
+                else:
+                    extra_body.setdefault("reasoning_effort", level)
+                return self._stream_completion(
+                    mode_prompt, extra_body, model_name, start, **request_kwargs
                 )
-                self._reasoning_unsupported.add(cache_key)
-                extra_body = {k: v for k, v in extra_body.items() if k != "reasoning_effort"}
-                return self._stream_completion(prompt, extra_body, model_name, start, **kwargs)
-        except Exception:
-            logger.error(
-                "%s: API call failed for model %s after %.1fs",
+
+            return self._generate_with_reasoning(self.model, reasoning, _send)
+
+        try:
+            return self._generate_with_structure(
+                self.model, prompt, response_schema, _send_structured
+            )
+        except APIStatusError as exc:
+            if not _is_schema_validation_failure(exc):
+                self._log_failure(start)
+                raise
+            logger.warning(
+                "%s: %s output failed the provider's schema validation",
                 self.__class__.__name__,
                 self.model,
-                time.perf_counter() - start,
-                exc_info=True,
             )
+            raise InvalidAIResponseError(str(exc)) from exc
+        except Exception:
+            self._log_failure(start)
             raise
+
+    def _log_failure(self, start: float) -> None:
+        """
+        Logs a failed API call with its elapsed time and traceback.
+        """
+        logger.error(
+            "%s: API call failed for model %s after %.1fs",
+            self.__class__.__name__,
+            self.model,
+            time.perf_counter() - start,
+            exc_info=True,
+        )
+
+    def _provider_scope(self) -> str:
+        """
+        Scopes the rejection memory by endpoint, since providers share model names.
+        """
+        return self.CONFIG.base_url
+
+    def _is_reasoning_rejected(self, exc: BaseException) -> bool:
+        """
+        OpenAI-compatible providers reject the parameter with a 400 naming it.
+        """
+        return isinstance(exc, BadRequestError) and "reasoning_effort" in str(exc)
+
+    def _is_structured_output_rejected(self, exc: BaseException) -> bool:
+        """
+        Providers and routers refuse an unsupported response_format with a 400,
+        404 or 422 naming it; an output failing the schema is not a refusal.
+        """
+        if not isinstance(exc, APIStatusError) or exc.status_code not in (400, 404, 422):
+            return False
+        message = str(exc).lower().replace("-", " ")
+        if "json_validate_failed" in message:
+            return False
+        markers = ("response_format", "json_schema", "json_object", "structured output")
+        return any(marker in message for marker in markers)
 
     def _stream_completion(
         self, prompt: str, extra_body: dict, model_name: str, start: float, **kwargs
@@ -162,23 +304,23 @@ class OpenAIClient(AIClient):
         chunks: list[str] = []
         ttft_logged = False
 
-        stream = self.client.chat.completions.create(
+        with self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             extra_body=extra_body,
             stream=True,
             **kwargs,
-        )
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta.content
-            if not delta:
-                continue
-            if not ttft_logged:
-                ttft_logged = True
-                logger.progress(
-                    "%s: first token after %.1fs", model_name, time.perf_counter() - start
-                )
-            chunks.append(delta)
+        ) as stream:
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta.content
+                if not delta:
+                    continue
+                if not ttft_logged:
+                    ttft_logged = True
+                    logger.progress(
+                        "%s: first token after %.1fs", model_name, time.perf_counter() - start
+                    )
+                chunks.append(delta)
         return "".join(chunks)

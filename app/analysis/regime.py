@@ -207,7 +207,7 @@ def _to_numeric(series: pd.Series) -> pd.Series:
             return float("nan")
         try:
             return get_numeric(raw.strip())
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return float("nan")
 
     return series.map(parse)

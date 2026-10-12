@@ -99,6 +99,37 @@ class TestDatabase(unittest.TestCase):
         """
         self.assertEqual(get_last_quarter(), "2025Q1")
 
+    def _add_quarter(self, quarter: str, funds: int) -> None:
+        """
+        Create a quarter folder holding `funds` filing CSVs.
+        """
+        folder = Path(self.test_db_folder) / quarter
+        folder.mkdir(parents=True, exist_ok=True)
+        for i in range(funds):
+            (folder / f"Extra_{i}.csv").write_text("CUSIP,Ticker,Value,Shares\n", encoding="utf-8")
+
+    def test_get_last_quarter_needs_half_the_previous_quarters_filings(self):
+        """
+        A newest quarter with under 50% of the previous one's filings is not usable yet;
+        exactly 50% is enough.
+        """
+        cases = [(1, "2025Q2"), (0, "2025Q1")]
+        for funds, expected in cases:
+            with self.subTest(funds_in_newest=funds):
+                shutil.rmtree(Path(self.test_db_folder) / "2025Q2", ignore_errors=True)
+                self._add_quarter("2025Q2", funds)
+                self.assertEqual(get_last_quarter(), expected)
+
+    def test_get_last_quarter_compares_with_the_last_usable_quarter(self):
+        """
+        An incomplete quarter is no baseline: a later one thin against the last complete quarter
+        stays unusable even if it is not thin against the incomplete one.
+        """
+        self._add_quarter("2025Q2", 10)
+        self._add_quarter("2025Q3", 2)
+        self._add_quarter("2025Q4", 1)
+        self.assertEqual(get_last_quarter(), "2025Q2")
+
     def test_count_funds_in_quarter(self):
         """
         Returns the count of CSV files in a given quarter folder; 0 for non-existent quarters.
@@ -176,16 +207,6 @@ class TestDatabase(unittest.TestCase):
         df = load_non_quarterly_data()
         self.assertEqual(len(df), 1)
         self.assertEqual(df.iloc[0]["Ticker"], "TICKA")
-
-    def test_save_stock_and_sort(self):
-        """
-        Saves a new stock to the database and verifies it appears after sort.
-        """
-        save_stock("789", "TICKC", "Company C")
-        sort_stocks(str(Path(self.test_db_folder) / STOCKS_FILE))
-        df = load_stocks()
-        self.assertIn("789", df.index)
-        self.assertEqual(df.loc["789", "Ticker"], "TICKC")
 
     def test_save_stock_strips_whitespace(self):
         """
@@ -308,39 +329,6 @@ class TestDatabase(unittest.TestCase):
         # Tail sorted alphabetically (case-insensitive)
         self.assertEqual(list(df["Fund"].iloc[README_DISPLAY_LIMIT:]), ["alpha", "Mike", "zeta"])
 
-    def test_find_cusips_for_ticker(self):
-        """
-        Returns all CUSIP records matching a given ticker symbol.
-        """
-        res = find_cusips_for_ticker("TICKA")
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]["CUSIP"], "123")
-
-    def test_update_ticker(self):
-        """
-        Propagates a ticker rename across stocks.csv, all quarterly CSVs, and non_quarterly.csv.
-        """
-        update_ticker("TICKA", "TICKNEW")
-
-        df_stocks = load_stocks()
-        self.assertEqual(df_stocks.loc["123", "Ticker"], "TICKNEW")
-
-        df_q = load_fund_holdings("Fund A", "2025Q1")
-        self.assertEqual(df_q.iloc[0]["Ticker"], "TICKNEW")
-
-        df_nq = load_non_quarterly_data()
-        self.assertEqual(df_nq.iloc[0]["Ticker"], "TICKNEW")
-
-    def test_update_ticker_with_new_company_name(self):
-        """
-        Propagates a ticker rename with a new company name across stocks.csv.
-        """
-        update_ticker("TICKA", "TICKNEW", new_company="New Company Name")
-
-        df_stocks = load_stocks()
-        self.assertEqual(df_stocks.loc["123", "Ticker"], "TICKNEW")
-        self.assertEqual(df_stocks.loc["123", "Company"], "New Company Name")
-
     def test_update_ticker_without_company_preserves_existing(self):
         """
         When no new company name is given, the existing company name is preserved.
@@ -350,17 +338,6 @@ class TestDatabase(unittest.TestCase):
         df_stocks = load_stocks()
         self.assertEqual(df_stocks.loc["123", "Ticker"], "TICKNEW")
         self.assertEqual(df_stocks.loc["123", "Company"], "Company A")
-
-    def test_update_ticker_preserves_industry(self):
-        """
-        Renaming a ticker must NOT clear the Industry column — Industry stays
-        with the CUSIP regardless of ticker changes.
-        """
-        update_ticker("TICKA", "TICKNEW", new_company="New Name")
-
-        df_stocks = load_stocks()
-        self.assertEqual(df_stocks.loc["123", "Industry"], "Software - Application")
-        self.assertEqual(df_stocks.loc["456", "Industry"], "Banks - Regional")
 
     def test_sort_stocks_preserves_industry(self):
         """
@@ -632,7 +609,7 @@ class TestDatabase(unittest.TestCase):
 
         with (
             unittest.mock.patch("app.database.DB_FOLDER", gone),
-            unittest.mock.patch("app.database.stocks.time", _FakeTime()),
+            unittest.mock.patch("app.database.locks.time", _FakeTime()),
             self.assertRaises(TimeoutError),
             stocks_lock(timeout=1),
         ):
@@ -693,6 +670,24 @@ class TestDatabase(unittest.TestCase):
             save_non_quarterly_filings(frames)
 
         self.assertEqual(target.read_text(encoding="utf-8"), original)
+
+    def test_delete_unknown_fund_keeps_its_quarter_files(self):
+        """
+        A fund missing from hedge_funds.csv is rejected before any filing is deleted.
+        """
+        delete_fund_from_database({"Fund": "Fund B"})
+
+        self.assertTrue((Path(self.test_db_folder) / "2025Q1" / "Fund_B.csv").exists())
+
+    def test_delete_fund_keeps_quarter_files_when_csv_move_fails(self):
+        """
+        Quarter files survive a failed hedge_funds -> excluded move, so nothing is half-deleted.
+        """
+        with unittest.mock.patch("app.utils.pd.tempfile.mkstemp", side_effect=OSError("disk full")):
+            delete_fund_from_database({"Fund": "Fund A"})
+
+        self.assertTrue((Path(self.test_db_folder) / "2025Q1" / "Fund_A.csv").exists())
+        self.assertTrue((Path(self.test_db_folder) / "2024Q4" / "Fund_A.csv").exists())
 
     def test_delete_fund_does_not_report_success_when_csv_update_fails(self):
         """

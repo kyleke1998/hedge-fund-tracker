@@ -130,44 +130,36 @@ class TestCompanyNamesMatch(unittest.TestCase):
     a NASDAQ symbol change whose company is unrelated to the tracked one.
     """
 
-    def test_identical_names_match(self):
+    def test_same_company_matches(self):
         """
-        The exact same name on both sides matches.
+        The exact same name matches, and so does the NASDAQ name with a
+        share-class suffix appended to the tracked base name.
         """
-        self.assertTrue(company_names_match("Co One", "Co One"))
-
-    def test_share_class_suffix_matches(self):
-        """
-        The NASDAQ name with a share-class suffix appended still matches the
-        tracked base name.
-        """
-        self.assertTrue(
-            company_names_match(
+        cases = [
+            ("Co One", "Co One"),
+            (
                 "Northwind Maritime Group Ltd",
                 "Northwind Maritime Group Ltd Class A Ordinary Shares",
-            )
-        )
+            ),
+        ]
+        for tracked, listed in cases:
+            with self.subTest(tracked=tracked, listed=listed):
+                self.assertTrue(company_names_match(tracked, listed))
 
-    def test_unrelated_names_do_not_match(self):
+    def test_unverifiable_or_unrelated_names_do_not_match(self):
         """
-        Two unrelated companies that happened to share a ticker do not match.
+        Unrelated companies sharing a ticker, a single distinctive token plus
+        generic suffixes, and a blank name on either side never match.
         """
-        self.assertFalse(
-            company_names_match("Orbital Rocket Technologies Corp", "Thematic New Issue ETF")
-        )
-
-    def test_generic_token_overlap_does_not_match(self):
-        """
-        Sharing only one distinctive token plus generic suffixes is not enough.
-        """
-        self.assertFalse(company_names_match("Acme Inc", "Acme Hospitality Trust Inc"))
-
-    def test_empty_name_does_not_match(self):
-        """
-        A blank name on either side can never be verified, so it never matches.
-        """
-        self.assertFalse(company_names_match("", "Co One"))
-        self.assertFalse(company_names_match("Co One", ""))
+        cases = [
+            ("Orbital Rocket Technologies Corp", "Thematic New Issue ETF"),
+            ("Acme Inc", "Acme Hospitality Trust Inc"),
+            ("", "Co One"),
+            ("Co One", ""),
+        ]
+        for tracked, listed in cases:
+            with self.subTest(tracked=tracked, listed=listed):
+                self.assertFalse(company_names_match(tracked, listed))
 
 
 @patch(f"{_MODULE}.OpenFIGI")
@@ -427,12 +419,13 @@ class TestApplyTickerChanges(unittest.TestCase):
     The class-level OpenFIGI mock is passed as each test's last argument.
     """
 
+    @patch(f"{_MODULE}.resolve_industry", return_value="")
     @patch(f"{_MODULE}.update_ticker")
     @patch(f"{_MODULE}.YFinance")
     @patch(f"{_MODULE}.find_cusips_for_ticker")
     @patch(f"{_MODULE}.Nasdaq")
     def test_applies_matching_change_with_yfinance_company(
-        self, mock_nasdaq, mock_find, mock_yf, mock_update, mock_figi
+        self, mock_nasdaq, mock_find, mock_yf, mock_update, _mock_industry, mock_figi
     ):
         """
         A matching change calls update_ticker with the YFinance-resolved company
@@ -447,18 +440,73 @@ class TestApplyTickerChanges(unittest.TestCase):
 
         result = apply_ticker_changes()
 
-        mock_update.assert_called_once_with("OLD1", "NEW1", new_company="Fresh Co")
+        mock_update.assert_called_once_with(
+            "OLD1", "NEW1", new_company="Fresh Co", new_industry=None
+        )
         self.assertEqual(
             result["applied"], [{"old": "OLD1", "new": "NEW1", "companyName": "Fresh Co"}]
         )
         self.assertIn("Applied 1 ticker change", result["message"])
 
+    @patch(f"{_MODULE}.resolve_industry")
+    @patch(f"{_MODULE}.update_ticker")
+    @patch(f"{_MODULE}.YFinance")
+    @patch(f"{_MODULE}.find_cusips_for_ticker")
+    @patch(f"{_MODULE}.Nasdaq")
+    def test_reclassifies_the_industry_after_a_rename(
+        self, mock_nasdaq, mock_find, mock_yf, mock_update, mock_industry, mock_figi
+    ):
+        """
+        A rename often follows a reverse merger, so the stored industry describes
+        the old business and is re-resolved for the new one.
+        """
+        mock_figi.get_ticker.return_value = None
+        mock_nasdaq.get_symbol_changes.return_value = [
+            {"oldSymbol": "OLD1", "newSymbol": "NEW1", "companyName": "Stale Co"},
+        ]
+        mock_find.return_value = [{"CUSIP": "C1", "Ticker": "OLD1", "Company": "Stale Co"}]
+        mock_yf.get_company.return_value = "Fresh Co"
+        mock_industry.return_value = "Aerospace & Defense"
+
+        apply_ticker_changes()
+
+        mock_industry.assert_called_once_with("NEW1", "Fresh Co")
+        mock_update.assert_called_once_with(
+            "OLD1", "NEW1", new_company="Fresh Co", new_industry="Aerospace & Defense"
+        )
+
+    @patch(f"{_MODULE}.resolve_industry")
+    @patch(f"{_MODULE}.update_ticker")
+    @patch(f"{_MODULE}.YFinance")
+    @patch(f"{_MODULE}.find_cusips_for_ticker")
+    @patch(f"{_MODULE}.Nasdaq")
+    def test_keeps_the_stored_industry_when_it_cannot_be_resolved(
+        self, mock_nasdaq, mock_find, mock_yf, mock_update, mock_industry, mock_figi
+    ):
+        """
+        An unresolvable industry must not blank the existing one.
+        """
+        mock_figi.get_ticker.return_value = None
+        mock_nasdaq.get_symbol_changes.return_value = [
+            {"oldSymbol": "OLD1", "newSymbol": "NEW1", "companyName": "Stale Co"},
+        ]
+        mock_find.return_value = [{"CUSIP": "C1", "Ticker": "OLD1", "Company": "Stale Co"}]
+        mock_yf.get_company.return_value = "Fresh Co"
+        mock_industry.return_value = ""
+
+        apply_ticker_changes()
+
+        mock_update.assert_called_once_with(
+            "OLD1", "NEW1", new_company="Fresh Co", new_industry=None
+        )
+
+    @patch(f"{_MODULE}.resolve_industry", return_value="")
     @patch(f"{_MODULE}.update_ticker")
     @patch(f"{_MODULE}.YFinance")
     @patch(f"{_MODULE}.find_cusips_for_ticker")
     @patch(f"{_MODULE}.Nasdaq")
     def test_falls_back_to_nasdaq_company_when_yfinance_empty(
-        self, mock_nasdaq, mock_find, mock_yf, mock_update, mock_figi
+        self, mock_nasdaq, mock_find, mock_yf, mock_update, _mock_industry, mock_figi
     ):
         """
         When YFinance returns no company, the NASDAQ-provided companyName is used.
@@ -472,7 +520,9 @@ class TestApplyTickerChanges(unittest.TestCase):
 
         result = apply_ticker_changes()
 
-        mock_update.assert_called_once_with("OLD1", "NEW1", new_company="Nasdaq Co")
+        mock_update.assert_called_once_with(
+            "OLD1", "NEW1", new_company="Nasdaq Co", new_industry=None
+        )
         self.assertEqual(result["applied"][0]["companyName"], "Nasdaq Co")
 
     @patch(f"{_MODULE}.update_ticker")

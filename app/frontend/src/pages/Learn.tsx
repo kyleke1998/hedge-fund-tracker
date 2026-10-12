@@ -1,15 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  BookOpen,
-  CalendarClock,
-  ChevronRight,
-  FileText,
-  Search,
-  TriangleAlert,
-  Workflow,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { useLocation } from "react-router";
+import { Search, X } from "lucide-react";
 
 import {
   Accordion,
@@ -20,16 +11,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { matchesQuery } from "@/lib/utils";
-import { type FaqSection, FAQ_LAST_UPDATED, FAQ_META, FAQ_SECTIONS } from "@/lib/faqContent";
+import {
+  type FaqItem,
+  type FaqSection,
+  FAQ_LAST_UPDATED,
+  FAQ_META,
+  FAQ_SECTIONS,
+} from "@/lib/faqContent";
 import { ROUTES } from "@/lib/routes";
 import { buildBreadcrumbJsonLd, buildFaqJsonLd, canonicalUrl } from "@/lib/seo";
-
-/** One icon per section, keyed by `faqContent.ts` section id — presentation-only mapping. */
-const SECTION_ICONS: Record<string, LucideIcon> = {
-  "sec-filings": FileText,
-  "how-it-works": Workflow,
-  limitations: TriangleAlert,
-};
 
 const LAST_UPDATED_LABEL = new Date(`${FAQ_LAST_UPDATED}T00:00:00Z`).toLocaleDateString("en-US", {
   year: "numeric",
@@ -37,6 +27,17 @@ const LAST_UPDATED_LABEL = new Date(`${FAQ_LAST_UPDATED}T00:00:00Z`).toLocaleDat
   day: "numeric",
   timeZone: "UTC",
 });
+
+// Questions are numbered once, across every section, so "Q07" names the same
+// entry whether or not a search filter is hiding its neighbours.
+const QUESTION_NUMBERS = new Map<string, number>(
+  FAQ_SECTIONS.flatMap((s) => s.items).map((item, i) => [item.id, i + 1]),
+);
+
+/** Every question, by id — used to resolve a `/learn#<item-id>` deep link. */
+const ITEMS_BY_ID = new Map<string, FaqItem>(
+  FAQ_SECTIONS.flatMap((s) => s.items).map((item) => [item.id, item]),
+);
 
 /**
  * Walks up from `node` to find the nearest scrollable ancestor. The app shell
@@ -53,6 +54,40 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
+/** `matchMedia` is absent in some non-browser environments (jsdom), so guard it. */
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+/**
+ * The search box's value together with the URL hash it was typed under. Storing
+ * the pair is what lets a later hash change drop a filter hiding its target
+ * without an effect writing back into state.
+ */
+type TypedQuery = {
+  readonly hash: string | null;
+  readonly value: string;
+};
+
+/**
+ * Accordion items opened by hand, valid only for the query/hash basis they were
+ * toggled under; any change to that basis falls back to the derived open set.
+ */
+type ManualOpen = {
+  readonly basis: string;
+  readonly items: readonly string[];
+};
+
+/**
+ * The URL hash wins over the search box: navigating to a question the current
+ * filter would hide clears the filter rather than showing an empty page.
+ */
+function clearFilterHiding(query: string, hashItemId: string | null): string {
+  if (!query.trim() || !hashItemId) return query;
+  const item = ITEMS_BY_ID.get(hashItemId);
+  return item && !matchesQuery(query, item.question, ...item.answer) ? "" : query;
+}
+
 function filterSections(sections: FaqSection[], query: string): FaqSection[] {
   if (!query.trim()) return sections;
   return sections
@@ -65,62 +100,66 @@ function filterSections(sections: FaqSection[], query: string): FaqSection[] {
 
 function FaqSectionBlock({
   section,
-  index,
-  forceOpen,
+  open,
+  onOpenChange,
   registerRef,
 }: {
   section: FaqSection;
-  index: number;
-  forceOpen: boolean;
+  /** Ids of this section's open items (the accordion is fully controlled). */
+  open: string[];
+  onOpenChange: (sectionItemIds: string[], next: string[]) => void;
   registerRef: (id: string, el: HTMLElement | null) => void;
 }) {
-  const Icon = SECTION_ICONS[section.id] ?? FileText;
+  const itemIds = section.items.map((i) => i.id);
   return (
-    <section
-      id={section.id}
-      ref={(el) => registerRef(section.id, el)}
-      className="scroll-mt-20 animate-slide-up"
-      style={{ animationDelay: `${index * 60}ms`, animationFillMode: "backwards" }}
-    >
+    <section id={section.id} ref={(el) => registerRef(section.id, el)} className="scroll-mt-20">
       <div className="flex items-baseline gap-3 mb-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary translate-y-0.5">
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        <h2 className="font-display text-base font-semibold tracking-tight text-foreground">
-          {section.title}
-        </h2>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {section.items.length.toString().padStart(2, "0")}
-        </span>
-        <span className="h-px flex-1 bg-border/60" aria-hidden="true" />
+        <h2 className="section-title">{section.title}</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">{section.items.length}</span>
+        <span className="h-px flex-1 bg-border" aria-hidden="true" />
       </div>
-      <div className="surface divide-y divide-border/60 px-5">
+      <div className="frame px-3">
         <Accordion
           type="multiple"
-          key={forceOpen ? "search" : "browse"}
-          defaultValue={forceOpen ? section.items.map((i) => i.id) : []}
+          value={open}
+          onValueChange={(next) => onOpenChange(itemIds, next)}
         >
-          {section.items.map((item, itemIndex) => (
-            <AccordionItem key={item.id} value={item.id} id={item.id} className="border-0">
-              <AccordionTrigger className="group py-4 text-left hover:no-underline gap-3 [&>svg]:text-muted-foreground">
-                <span className="flex items-baseline gap-3 min-w-0">
-                  <span className="font-mono text-[11px] text-primary shrink-0 tabular-nums">
-                    Q{(itemIndex + 1).toString().padStart(2, "0")}
+          {section.items.map((item) => {
+            const n = QUESTION_NUMBERS.get(item.id) ?? 0;
+            return (
+              <AccordionItem
+                key={item.id}
+                value={item.id}
+                className="border-b border-border/60 last:border-0"
+              >
+                {/* The id lives on the trigger so `/learn#<id>` lands on a
+                    focusable element, and so it matches the anchor the static
+                    pre-render emits (renderFaqStaticHtml in lib/seo.ts). */}
+                <AccordionTrigger
+                  id={item.id}
+                  className="scroll-mt-20 py-3 text-left font-normal hover:no-underline gap-3 [&>svg]:text-muted-foreground"
+                >
+                  <span className="flex items-baseline gap-3 min-w-0">
+                    <span
+                      className="text-xs text-muted-foreground shrink-0 tabular-nums"
+                      aria-hidden="true"
+                    >
+                      Q{n.toString().padStart(2, "0")}
+                    </span>
+                    <span className="sr-only">Question {n}</span>
+                    <span className="text-[13px] text-foreground">{item.question}</span>
                   </span>
-                  <span className="text-sm text-foreground group-hover:text-primary transition-colors">
-                    {item.question}
-                  </span>
-                </span>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 border-l-2 border-primary/25 pl-[1.9rem] ml-[0.05rem] text-sm leading-relaxed text-muted-foreground">
-                  {item.answer.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 border-l border-border pl-4 ml-[1.5ch] text-sm leading-6 text-muted-foreground">
+                    {item.answer.map((paragraph) => (
+                      <p key={paragraph}>{paragraph}</p>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
         </Accordion>
       </div>
     </section>
@@ -147,29 +186,110 @@ export default function Learn() {
     jsonLd,
   });
 
-  const [query, setQuery] = useState("");
+  const [typedQuery, setTypedQuery] = useState<TypedQuery>({ hash: null, value: "" });
+  const [manualOpen, setManualOpen] = useState<ManualOpen | null>(null);
   const [activeSection, setActiveSection] = useState(FAQ_SECTIONS[0]?.id);
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // A `/learn#<item-id>` deep link (see `learnItem()` in lib/routes.ts). Read
+  // from the router so it also reacts to hash changes while already on /learn.
+  const { hash } = useLocation();
+  const hashItemId = useMemo(() => {
+    const id = decodeURIComponent(hash.replace(/^#/, ""));
+    return ITEMS_BY_ID.has(id) ? id : null;
+  }, [hash]);
+
+  const query =
+    typedQuery.hash === hashItemId
+      ? typedQuery.value
+      : clearFilterHiding(typedQuery.value, hashItemId);
+  const setQuery = (value: string) => setTypedQuery({ hash: hashItemId, value });
+
   const sections = useMemo(() => filterSections(FAQ_SECTIONS, query), [query]);
-  const totalQuestions = useMemo(
-    () => FAQ_SECTIONS.reduce((sum, s) => sum + s.items.length, 0),
-    [],
-  );
+  const totalQuestions = QUESTION_NUMBERS.size;
   const matchCount = useMemo(
     () => sections.reduce((sum, s) => sum + s.items.length, 0),
     [sections],
   );
 
+  // A search expands every match (the answers are what is being searched), no
+  // search leaves only the hash-pinned question open. Derived during render
+  // rather than synchronised by an effect, so the deep-linked item is already
+  // expanded in the first commit.
+  const openBasis = JSON.stringify([query.trim(), hashItemId]);
+  const openItems = useMemo<readonly string[]>(() => {
+    if (manualOpen?.basis === openBasis) return manualOpen.items;
+    if (query.trim()) return sections.flatMap((s) => s.items.map((i) => i.id));
+    return hashItemId ? [hashItemId] : [];
+  }, [manualOpen, openBasis, query, sections, hashItemId]);
+
+  // Scrolling and focus are the one genuinely external thing a deep link does,
+  // so they stay in an effect — keyed on the hash, which is what changed.
+  useEffect(() => {
+    if (!hashItemId) return;
+    let cancelled = false;
+    let frame = 0;
+    let attempts = 0;
+
+    const scrollTo = (trigger: HTMLElement, behavior: ScrollBehavior) => {
+      trigger.scrollIntoView?.({ behavior, block: "start" });
+    };
+
+    // On a cold load the accordion content is still mounting and the web font
+    // has not swapped in yet, so a single smooth scroll issued in the same tick
+    // as the open state either resolves against a stale layout or is cancelled
+    // outright and the viewport never moves. So: wait for the trigger and for a
+    // painted frame, scroll, then correct once layout has settled.
+    const run = () => {
+      if (cancelled) return;
+      const trigger = document.getElementById(hashItemId);
+      if (!trigger) {
+        if (attempts++ > 30) return;
+        frame = requestAnimationFrame(run);
+        return;
+      }
+      const reduced = prefersReducedMotion();
+      scrollTo(trigger, reduced ? "auto" : "smooth");
+      // preventScroll: focus()'s own scrolling would fight the one above.
+      trigger.focus({ preventScroll: true });
+
+      const settle = () => {
+        if (cancelled) return;
+        const el = document.getElementById(hashItemId);
+        if (!el) return;
+        const target = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+        const parentTop = getScrollParent(el)?.getBoundingClientRect().top ?? 0;
+        if (Math.abs(el.getBoundingClientRect().top - (parentTop + target)) > 4) {
+          scrollTo(el, "auto");
+        }
+      };
+      void (document.fonts?.ready ?? Promise.resolve()).then(() => {
+        if (cancelled) return;
+        frame = requestAnimationFrame(() => {
+          frame = requestAnimationFrame(settle);
+        });
+      });
+    };
+
+    // A double rAF: the first frame commits the open item's layout, the second
+    // runs after it has been measured.
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(run);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [hashItemId]);
+
   const scrollToSection = (id: string, behavior: ScrollBehavior) => {
     // scrollIntoView's own "smooth" ignores the CSS reduced-motion override
     // above (that only governs browser-native scroll-behavior), so honor the
     // preference explicitly here too.
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     sectionRefs.current
       .get(id)
-      ?.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : behavior, block: "start" });
+      ?.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : behavior, block: "start" });
   };
 
   // Scroll-spy: highlight the index-rail entry for whichever section heading
@@ -178,11 +298,12 @@ export default function Learn() {
   // own scroll position directly instead of using a viewport-rooted
   // IntersectionObserver (which never fires for a nested scroll container).
   useEffect(() => {
+    // Phones scroll the document itself, so there is no scrolling ancestor there.
     const scrollParent = getScrollParent(rootRef.current);
-    if (!scrollParent) return;
+    const scrollTarget: HTMLElement | Window = scrollParent ?? window;
 
     const updateActiveSection = () => {
-      const containerTop = scrollParent.getBoundingClientRect().top;
+      const containerTop = scrollParent?.getBoundingClientRect().top ?? 0;
       const threshold = containerTop + 96; // roughly the sticky header height
       let current = FAQ_SECTIONS[0]?.id;
       for (const section of sections) {
@@ -195,17 +316,17 @@ export default function Learn() {
     // Deep-link support: jump straight to the section named in the URL hash
     // on first load (the browser's native hash-scroll only targets the
     // window, so it never reaches content inside a nested scroll container).
-    const hashId = window.location.hash.slice(1);
-    if (hashId && sectionRefs.current.has(hashId)) {
+    const hashId = decodeURIComponent(hash.replace(/^#/, ""));
+    if (!hashItemId && hashId && sectionRefs.current.has(hashId)) {
       scrollToSection(hashId, "auto");
       setActiveSection(hashId);
     } else {
       updateActiveSection();
     }
 
-    scrollParent.addEventListener("scroll", updateActiveSection, { passive: true });
-    return () => scrollParent.removeEventListener("scroll", updateActiveSection);
-  }, [sections]);
+    scrollTarget.addEventListener("scroll", updateActiveSection, { passive: true });
+    return () => scrollTarget.removeEventListener("scroll", updateActiveSection);
+  }, [sections, hash, hashItemId]);
 
   return (
     // pb-[70vh]: lets any section (including the last one) scroll all the way
@@ -213,88 +334,87 @@ export default function Learn() {
     // section, the browser clamps the scroll offset before it gets there, so
     // the last entries could never become "active" via anchor nav or the rail.
     <div ref={rootRef} className="space-y-8 max-w-screen-2xl pb-[70vh]">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <span className="eyebrow">Knowledge base</span>
-          <h1 className="page-title mt-1.5">
-            <BookOpen className="page-title-icon" /> {FAQ_META.heading}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 max-w-prose">{FAQ_META.intro}</p>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-md border border-dashed border-border/90 px-2.5 py-1.5 font-mono text-xs font-medium text-foreground/80 shrink-0">
-          <CalendarClock className="h-3.5 w-3.5" />
-          Reviewed {LAST_UPDATED_LABEL}
-        </div>
+      <div className="space-y-2">
+        <h1 className="page-title">{FAQ_META.heading}</h1>
+        <p className="text-sm text-muted-foreground max-w-[64ch]">{FAQ_META.intro}</p>
+        <p className="status-line text-muted-foreground">
+          Board info <span aria-hidden="true">·</span> Reviewed {LAST_UPDATED_LABEL}{" "}
+          <span aria-hidden="true">·</span> Questions {totalQuestions}
+        </p>
       </div>
 
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search
+          className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          aria-hidden="true"
+        />
         <Input
           placeholder={`Search ${totalQuestions} questions…`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-9 pr-9 bg-card border-border"
+          aria-label="Search questions"
+          className="pl-8 pr-9"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+            className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <div className="grid items-start gap-x-10 gap-y-8 xl:grid-cols-[13rem_minmax(0,1fr)]">
-        <nav
-          aria-label="FAQ sections"
-          className="hidden xl:block sticky top-20 space-y-1 self-start"
-        >
-          {FAQ_SECTIONS.map((section) => {
-            const isActive = activeSection === section.id;
-            const isFiltered = !sections.some((s) => s.id === section.id);
-            return (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.history.replaceState(null, "", `#${section.id}`);
-                  scrollToSection(section.id, "smooth");
-                  setActiveSection(section.id);
-                }}
-                aria-current={isActive ? "location" : undefined}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                } ${isFiltered ? "opacity-30 pointer-events-none" : ""}`}
-              >
-                <ChevronRight
-                  className={`h-3 w-3 shrink-0 transition-transform ${isActive ? "translate-x-0.5" : ""}`}
-                />
-                <span className="truncate">{section.title}</span>
-              </a>
-            );
-          })}
+      <div className="grid items-start gap-x-10 gap-y-8 xl:grid-cols-[16rem_minmax(0,1fr)]">
+        <nav aria-label="FAQ sections" className="hidden xl:block sticky top-20 self-start">
+          <ol>
+            {FAQ_SECTIONS.map((section) => {
+              const isActive = activeSection === section.id;
+              const isFiltered = !sections.some((s) => s.id === section.id);
+              return (
+                <li key={section.id}>
+                  <a
+                    href={`#${section.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.history.replaceState(null, "", `#${section.id}`);
+                      scrollToSection(section.id, "smooth");
+                      setActiveSection(section.id);
+                    }}
+                    aria-current={isActive ? "location" : undefined}
+                    data-active={isActive || undefined}
+                    className={`menu-line ${isFiltered ? "opacity-30 pointer-events-none" : ""}`}
+                  >
+                    <span className="truncate">{section.title}</span>
+                    <span className="tabular-nums">{section.items.length}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
         </nav>
 
         <div className="min-w-0 space-y-8">
           {query && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground" role="status">
               {matchCount === 0
                 ? `No questions match “${query}”.`
                 : `${matchCount} of ${totalQuestions} questions match “${query}”.`}
             </p>
           )}
-          {sections.map((section, index) => (
+          {sections.map((section) => (
             <FaqSectionBlock
               key={section.id}
               section={section}
-              index={index}
-              forceOpen={query.trim().length > 0}
+              open={openItems.filter((id) => section.items.some((i) => i.id === id))}
+              onOpenChange={(sectionItemIds, next) =>
+                setManualOpen({
+                  basis: openBasis,
+                  items: [...openItems.filter((id) => !sectionItemIds.includes(id)), ...next],
+                })
+              }
               registerRef={(id, el) => {
                 if (el) sectionRefs.current.set(id, el);
                 else sectionRefs.current.delete(id);

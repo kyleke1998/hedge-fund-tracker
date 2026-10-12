@@ -17,13 +17,6 @@ export interface AIProvider {
 
 export const AI_PROVIDERS: AIProvider[] = [
   {
-    id: "github",
-    name: "GitHub Models",
-    envKey: "GITHUB_TOKEN",
-    link: "https://github.com/settings/tokens",
-    hint: "ghp_…",
-  },
-  {
     id: "google",
     name: "Google AI Studio",
     envKey: "GOOGLE_API_KEY",
@@ -38,11 +31,11 @@ export const AI_PROVIDERS: AIProvider[] = [
     hint: "gsk_…",
   },
   {
-    id: "huggingface",
-    name: "HuggingFace",
-    envKey: "HF_TOKEN",
-    link: "https://huggingface.co/settings/tokens",
-    hint: "hf_…",
+    id: "ollama",
+    name: "Ollama",
+    envKey: "OLLAMA_API_KEY",
+    link: "https://ollama.com/settings/keys",
+    hint: "id.secret",
   },
   {
     id: "openrouter",
@@ -51,57 +44,16 @@ export const AI_PROVIDERS: AIProvider[] = [
     link: "https://openrouter.ai/settings/keys",
     hint: "sk-or-…",
   },
+  {
+    id: "zai",
+    name: "Z.AI",
+    envKey: "ZAI_API_KEY",
+    link: "https://z.ai/manage-apikey/apikey-list",
+    hint: "id.secret",
+  },
 ];
 
 // ─── Python backend AI calls ───────────────────────────────────────────────────
-
-function _providerIdForModel(_modelId: string | undefined): null {
-  return null; // provider is now resolved via ModelSelector → onProviderChange
-}
-
-export async function runPromiseScore(
-  quarter: string,
-  topN: number,
-  modelId?: string,
-): Promise<unknown[]> {
-  const res = await fetch(`${API_BASE}/api/ai/promise-score`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      quarter,
-      top_n: topN,
-      model_id: modelId || null,
-      provider_id: _providerIdForModel(modelId),
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Server error ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function runDueDiligence(
-  ticker: string,
-  quarter: string,
-  modelId?: string,
-): Promise<unknown> {
-  const res = await fetch(`${API_BASE}/api/ai/due-diligence`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ticker,
-      quarter,
-      model_id: modelId || null,
-      provider_id: _providerIdForModel(modelId),
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Server error ${res.status}`);
-  }
-  return res.json();
-}
 
 // ─── Streaming AI calls ────────────────────────────────────────────────────────
 
@@ -170,6 +122,31 @@ async function _readSSEStream(res: Response, onLog: (line: string) => void): Pro
   throw new Error("Stream ended without result");
 }
 
+/**
+ * Builds an Error from a failed FastAPI response. `detail` is a string for
+ * HTTPException but a list of `{loc, msg}` objects for request-validation errors.
+ */
+async function responseError(res: Response): Promise<Error> {
+  const body: unknown = await res.json().catch(() => null);
+  const detail =
+    typeof body === "object" && body !== null && "detail" in body ? body.detail : undefined;
+  return new Error(formatErrorDetail(detail) || `Server error ${res.status}`);
+}
+
+function formatErrorDetail(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (!Array.isArray(detail)) return "";
+  return detail
+    .map((item: unknown) => {
+      if (typeof item !== "object" || item === null) return String(item);
+      const msg = "msg" in item && typeof item.msg === "string" ? item.msg : "";
+      const loc = "loc" in item && Array.isArray(item.loc) ? item.loc.join(".") : "";
+      return loc ? `${loc}: ${msg}` : msg;
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
 export async function runPromiseScoreStream(
   quarter: string,
   topN: number,
@@ -186,13 +163,10 @@ export async function runPromiseScoreStream(
       quarter,
       top_n: topN,
       model_id: modelId || null,
-      provider_id: providerId || _providerIdForModel(modelId),
+      provider_id: providerId || null,
     }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Server error ${res.status}`);
-  }
+  if (!res.ok) throw await responseError(res);
   const data = await _readSSEStream(res, onLog);
   if (!Array.isArray(data)) throw new Error("Malformed AI response: expected a list of stocks");
   return data;
@@ -214,13 +188,10 @@ export async function runDueDiligenceStream(
       ticker,
       quarter,
       model_id: modelId || null,
-      provider_id: providerId || _providerIdForModel(modelId),
+      provider_id: providerId || null,
     }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Server error ${res.status}`);
-  }
+  if (!res.ok) throw await responseError(res);
   return _readSSEStream(res, onLog);
 }
 

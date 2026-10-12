@@ -1,5 +1,6 @@
 import re
 import warnings
+from collections.abc import Mapping
 
 import pandas as pd
 from bs4 import BeautifulSoup, Tag, XMLParsedAsHTMLWarning
@@ -21,6 +22,12 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 # with nested ``>`` characters inside the internal subset.
 _ENTITY_RE = re.compile(rb"<!ENTITY[^>]*>", re.IGNORECASE)
 _DOCTYPE_RE = re.compile(rb"<!DOCTYPE[^>]*>", re.IGNORECASE)
+
+
+class UnparseableHoldingsError(ValueError):
+    """
+    A 13F information table whose entries cannot be told apart from "the fund holds nothing".
+    """
 
 
 def _sanitize_xml(content):
@@ -50,9 +57,15 @@ def _get_tag_text(element, tag_suffix):
     return None
 
 
-def xml_to_dataframe_13f(xml_content):
+def xml_to_dataframe_13f(
+    xml_content, corrections: Mapping[tuple[str, str], str] | None = None
+) -> pd.DataFrame:
     """
     Parses the XML content of a 13F filing and returns the data as a Pandas DataFrame.
+
+    ``corrections`` maps (filed CUSIP, upper-cased filed name) to the CUSIP the
+    issuer really has (see app.database.filing_anomalies); it is applied before
+    rows are grouped by CUSIP, so a corrected row merges as a correct filing would.
     """
     soup_xml = BeautifulSoup(_sanitize_xml(xml_content), "lxml")
 
@@ -69,6 +82,9 @@ def xml_to_dataframe_13f(xml_content):
 
         data.append([company, cusip, value, shares, put_call])
 
+    if not data:
+        raise UnparseableHoldingsError("The 13F information table has no entries")
+
     df = pd.DataFrame(data, columns=columns)
 
     df = df[df["Put/Call"] == ""].drop("Put/Call", axis=1)
@@ -81,6 +97,19 @@ def xml_to_dataframe_13f(xml_content):
 
     df["Company"] = df["Company"].str.strip().str.replace(r"\s+", " ", regex=True)
     df["CUSIP"] = df["CUSIP"].str.upper()
+    if corrections:
+        fixed_cusips: list[str] = []
+        for cusip, company in zip(df["CUSIP"], df["Company"], strict=True):
+            fixed = corrections.get((cusip, company.upper()))
+            if fixed:
+                logger.info(
+                    "Filing correction: %s filed as %s, booked as %s",
+                    log_safe(company),
+                    log_safe(cusip),
+                    log_safe(fixed),
+                )
+            fixed_cusips.append(fixed or cusip)
+        df["CUSIP"] = fixed_cusips
     df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
     df["Shares"] = pd.to_numeric(df["Shares"], errors="coerce")
 
@@ -91,6 +120,10 @@ def xml_to_dataframe_13f(xml_content):
             "Dropped %d row(s) with unparseable Value/Shares from 13F filing",
             int(unparseable_mask.sum()),
         )
+        if unparseable_mask.all():
+            raise UnparseableHoldingsError(
+                f"All {len(df)} position(s) in the 13F information table have unreadable numbers"
+            )
         df = df[~unparseable_mask]
     df["Shares"] = df["Shares"].astype(int)
 
@@ -117,7 +150,7 @@ def xml_to_dataframe_schedule(xml_content):
     """
     soup_xml = BeautifulSoup(_sanitize_xml(xml_content), "lxml")
 
-    columns = ["Company", "CUSIP", "CIK", "Shares", "Owner_CIK", "Owner", "Date"]
+    columns = ["Company", "CUSIP", "CIK", "Shares", "Class_Pct", "Owner_CIK", "Owner", "Date"]
 
     data = []
 
@@ -135,12 +168,18 @@ def xml_to_dataframe_schedule(xml_content):
         shares = _get_tag_text(reporting_person, "aggregateamountowned") or _get_tag_text(
             reporting_person, "reportingpersonbeneficiallyownedaggregatenumberofshares"
         )
+        # Percentage of the class: the only figure in the filing that ties the
+        # reported share count to the size of the class it belongs to, which is
+        # what reconciles a depositary receipt with its underlying shares.
+        class_pct = _get_tag_text(reporting_person, "classpercent") or _get_tag_text(
+            reporting_person, "percentofclass"
+        )
         owner_cik = _get_tag_text(reporting_person, "rptownercik") or _get_tag_text(
             reporting_person, "reportingpersoncik"
         )
         owner_name = _get_tag_text(reporting_person, "reportingpersonname")
 
-        data.append([company, cusip, cik, shares, owner_cik, owner_name, date])
+        data.append([company, cusip, cik, shares, class_pct, owner_cik, owner_name, date])
 
     df = pd.DataFrame(data, columns=columns)
 
@@ -148,6 +187,7 @@ def xml_to_dataframe_schedule(xml_content):
     df["CUSIP"] = df["CUSIP"].str.upper()
     df["CIK"] = df["CIK"].str.strip()
     df["Shares"] = pd.to_numeric(df["Shares"], errors="coerce").fillna(0).astype(int)
+    df["Class_Pct"] = pd.to_numeric(df["Class_Pct"], errors="coerce")
     df["Owner_CIK"] = df["Owner_CIK"].str.strip()
     df["Owner"] = df["Owner"].str.upper()
     df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y", errors="coerce")
@@ -155,10 +195,54 @@ def xml_to_dataframe_schedule(xml_content):
     return df
 
 
+_COMMON_TITLE_RE = re.compile(r"\b(?:COMMON|ORDINARY)\b")
+_NON_COMMON_TITLE_RE = re.compile(r"\b(?:PREFERRED|PREFERENCE|WARRANTS?|RIGHTS?|UNITS?|NOTES?)\b")
+_CLASS_DESIGNATOR_RE = re.compile(r"\b(?:CLASS|SERIES)\s+([A-Z0-9]+)\b")
+
+
+def _security_class(title):
+    """
+    Maps a Form 4 security title to a class key: wording variants of the same
+    common class (e.g. with or without the par value) share a key, while a
+    distinct class designator or a non-common security keeps its own.
+    """
+    normalized = re.sub(r"\s+", " ", (title or "").upper()).strip()
+    if _COMMON_TITLE_RE.search(normalized) and not _NON_COMMON_TITLE_RE.search(normalized):
+        designator = _CLASS_DESIGNATOR_RE.search(normalized)
+        return ("COMMON", designator.group(1) if designator else "")
+    return ("OTHER", normalized)
+
+
+def _pick_form4_class(classes: list[tuple[str, str]], ticker: str | None):
+    """
+    Chooses the Form 4 security class to report: the common class without a
+    designator, else common Class A, else the first common class, else the first
+    class listed. Warns when several distinct common designators are present.
+    """
+    common = [c for c in classes if c[0] == "COMMON"]
+    if len(common) > 1:
+        logger.warning(
+            "Form 4 for %s lists several common classes (%s): choosing one",
+            log_safe(ticker),
+            log_safe(", ".join(c[1] or "-" for c in common)),
+        )
+    # On dual-class issuers the unlisted class (often B) can be listed first.
+    for designator in ("", "A"):
+        if ("COMMON", designator) in common:
+            return ("COMMON", designator)
+    return next(iter(common or classes), None)
+
+
 def xml_to_dataframe_4(xml_content):
     """
     Parses the XML content of a Form 4 filing and returns the data as a Pandas DataFrame.
     It correctly extracts the final share ownership for each reporting owner.
+
+    Positions are tracked per security class, and only one class is reported
+    because different classes are different securities: the common class picked
+    by ``_pick_form4_class``, or the first class listed when none looks like
+    common stock. Within that class the latest post-transaction
+    amount of each ownership nature (direct, and each kind of indirect) is summed.
     """
     soup_xml = BeautifulSoup(_sanitize_xml(xml_content), "lxml")
 
@@ -171,7 +255,7 @@ def xml_to_dataframe_4(xml_content):
     cik = _get_tag_text(issuer, "issuercik")
     date = _get_tag_text(soup_xml, "periodofreport")
 
-    owner_shares = {}
+    owner_shares: dict[tuple[str, str], dict[tuple[str, str], float]] = {}
 
     def process_item(item):
         """
@@ -193,7 +277,8 @@ def xml_to_dataframe_4(xml_content):
         nature_of_ownership = _get_tag_text(ownership_nature, "natureofownership") or "Direct"
 
         key = (str(direct_indirect).strip().upper(), str(nature_of_ownership).strip().upper())
-        owner_shares[key] = shares_post
+        security_class = _security_class(_get_tag_text(item, "securitytitle"))
+        owner_shares.setdefault(security_class, {})[key] = shares_post
 
     non_derivative_table = soup_xml.find("nonderivativetable")
     if isinstance(non_derivative_table, Tag):
@@ -207,7 +292,8 @@ def xml_to_dataframe_4(xml_content):
             ):
                 process_item(child)
 
-    total_shares = int(sum(owner_shares.values()))
+    chosen_class = _pick_form4_class(list(owner_shares), ticker)
+    total_shares = int(sum(owner_shares[chosen_class].values())) if chosen_class else 0
 
     for reporting_person in soup_xml.find_all("reportingowner"):
         owner_cik = _get_tag_text(reporting_person, "rptownercik")

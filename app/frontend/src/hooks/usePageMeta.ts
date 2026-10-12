@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+export { SITE_NAME, pageTitle } from "@/lib/pageMeta";
+
 interface PageMeta {
   title: string;
   description: string;

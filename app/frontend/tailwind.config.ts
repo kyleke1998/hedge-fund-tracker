@@ -1,5 +1,18 @@
 import type { Config } from "tailwindcss";
 
+// One family everywhere: Inter, then the system sans. `mono` and `display`
+// are compatibility aliases so existing call sites resolve to it without a rename.
+const SANS = [
+  '"Inter Variable"',
+  "-apple-system",
+  "BlinkMacSystemFont",
+  '"Segoe UI"',
+  "Roboto",
+  '"Helvetica Neue"',
+  "Arial",
+  "sans-serif",
+];
+
 export default {
   darkMode: ["class"],
   content: [
@@ -19,9 +32,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Inter Tight", "Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        sans: SANS,
+        mono: SANS,
+        display: SANS,
       },
       colors: {
         border: "hsl(var(--border))",
@@ -29,9 +42,13 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        magenta: "hsl(var(--magenta))",
+        info: "hsl(var(--info))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          // Link/label blue: --primary itself is too dark on a panel.
+          text: "hsl(var(--primary-text))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -81,10 +98,27 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      // Soft radii: 6px controls, 8px panels, 12px the hero cards. Chips and
+      // pills use `full`.
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        none: "0",
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "6px",
+        lg: "8px",
+        xl: "12px",
+        "2xl": "16px",
+        "3xl": "20px",
+        full: "9999px",
+      },
+      // Panels sit on a faint lift; floating surfaces get a soft, wide shadow.
+      boxShadow: {
+        sm: "0 1px 2px rgb(0 0 0 / 0.04)",
+        DEFAULT: "0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04)",
+        md: "0 4px 12px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06)",
+        lg: "0 12px 32px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.06)",
+        xl: "0 20px 48px rgb(0 0 0 / 0.16), 0 4px 12px rgb(0 0 0 / 0.08)",
+        "2xl": "0 24px 64px rgb(0 0 0 / 0.2)",
       },
       keyframes: {
         "accordion-down": {
@@ -95,20 +129,10 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "pulse-glow": {
-          "0%, 100%": { opacity: "0.4" },
-          "50%": { opacity: "1" },
-        },
-        "slide-up": {
-          from: { opacity: "0", transform: "translateY(10px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
-        "slide-up": "slide-up 0.3s ease-out",
       },
     },
   },

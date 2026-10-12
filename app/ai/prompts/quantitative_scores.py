@@ -1,98 +1,69 @@
-def quantivative_scores_prompt(stocks_toon: str, filing_date: str) -> str:
+def quantitative_scores_prompt(stocks_toon: str, filing_date: str) -> str:
     """
     Build prompt for getting AI scores for stocks.
     """
     return f"""
 # ROLE
-You are a senior equity research analyst with over 30 years of experience specializing in sector analysis, risk assessment, and price action analysis. You have access to real-time and historical market data.
-
-Begin with a concise checklist (3-7 bullets) of what you will do for each stock; keep checklist items conceptual, not implementation-level.
+You are a senior equity research analyst specializing in risk assessment.
 
 # TASK
-For each stock listed, provide quantified scores and verify/provide its industry classification according to the criteria below.
+For every stock in STOCKS TO ANALYZE, return a risk score.
 
-STOCKS TO ANALYZE (TOON):
+# DATA YOU HAVE
+For each stock you receive: company name, industry, filing date ({filing_date}), price at the filing date, current price, and the percentage change between the two. You have no other market data (no price history, no volume) beyond these fields.
+Use those fields plus your general knowledge of the company. State only what you are confident about and NEVER invent a figure you were not given. If a company is unknown to you, score it from the supplied price change plus its industry and size, and stay near the middle of the band instead of guessing at an extreme.
+
+# STOCKS TO ANALYZE
 ```toon
 {stocks_toon}
 ```
 
-SCORING CRITERIA:
+# SCORING CRITERIA
 
-1. INDUSTRY:
-   - Verify the provided `industry`.
-   - **IMPORTANT**: If the provided industry is `"N/A"`, you **MUST** research and provide the correct industry classification using Yahoo Finance taxonomy (e.g., "Software—Application", "Biotechnology", "Oil & Gas Integrated").
-   - **ETF Rule**: If the ticker represents an Exchange Traded Fund (ETF), you **MUST** set the industry to `"ETF"`.
-   - If a valid industry value is already provided, keep it.
+RISK_SCORE (1-100, HIGH IS BAD)
+   - Assess the probability of PERMANENT capital loss: leverage, cash burn, customer or asset concentration, binary regulatory or clinical outcomes, going-concern doubt. This is a fundamental judgment, not a price judgment: do not raise it merely because the stock fell.
+   - 90-100: speculative or distressed, high leverage, binary outcomes, extreme regulatory or competitive threats.
+   - 70-89: high growth with high valuation risk, heavy exposure to cyclical downturns or disruption.
+   - 50-69: moderate risk, established business model but sensitive to economic cycles or industry shifts.
+   - 30-49: lower risk, strong balance sheet, diversified revenue, defensive characteristics.
+   - 1-29: minimal risk, blue-chip quality, fortress balance sheet, predictable cash flows.
 
-2. MOMENTUM_SCORE (1-100):
-   - **Objective**: Measure the strength of the stock's recent price trend and market enthusiasm.
-   - 90-100: Explosive upward momentum, significant outperformance of the market, strong buying pressure.
-   - 70-89: Solid uptrend, consistent higher highs and higher lows, strong relative strength.
-   - 50-69: Moderate momentum, recovery phase or steady consolidation with a slight upward bias.
-   - 30-49: Weakening trend, sideways movement, or underperforming the broader market.
-   - 1-29: Negative momentum, strong downtrend, or significant selling pressure.
+# CALIBRATION (illustrative profiles, not current readings of any company)
+- High-growth semiconductor leader: risk 65.
+- Defensive consumer staple: risk 20.
+- Large diversified pharma: risk 40.
 
-3. LOW_VOLATILITY_SCORE (1-100):
-   - **Objective**: Evaluate the stock's actual price stability and historical volatility (not its sector).
-   - **CONTEXT**: Use the provided `filing_price`, `current_price`, and `price_change_since_filing` as a reference for recent stability, combined with your knowledge of long-term price action.
-   - 90-100: Extremely stable price action, very low beta, minimal drawdowns over the long term.
-   - 70-89: Consistent price trends, moderate volatility, resilient during market downturns.
-   - 50-69: Balanced volatility; price movement is typical of consolidated large-cap companies.
-   - 30-49: Frequent wide price swings, higher beta, significant historical fluctuations.
-   - 1-29: High-beta stocks, extreme price spikes and drops, high speculative price action.
-
-4. RISK_SCORE (1-100):
-   - **Objective**: Assess the potential for permanent capital loss or extreme downside.
-   - 90-100: Speculative or distressed, high leverage, binary outcomes, or extreme regulatory/competitive threats.
-   - 70-89: High-growth with high valuation risk, significant exposure to cyclical downturns or disruption.
-   - 50-69: Moderate risk; established business model but sensitive to economic cycles or industry shifts.
-   - 30-49: Lower risk; strong balance sheet, diversified revenue streams, defensive characteristics.
-   - 1-29: Minimal risk; high quality "blue-chip", fortress balance sheet, very predictable cash flows.
-
-# VALIDATION EXAMPLES
-- **NVDA (NVIDIA Corp)**:
-  *Profile*: High-growth semiconductor leader with massive momentum but high valuation risk.
-  industry: "Semiconductors"
-  momentum_score: 95
-  low_volatility_score: 25
-  risk_score: 65
-- **PG (Procter & Gamble)**:
-  *Profile*: Defensive consumer staple with very stable price action and low growth volatility.
-  industry: "Household Products"
-  momentum_score: 45
-  low_volatility_score: 90
-  risk_score: 20
-- **LLY (Eli Lilly)**:
-  *Profile*: Pharmaceutical giant with strong recent uptrend due to new drug success, moderate volatility.
-  industry: "Pharmaceuticals"
-  momentum_score: 92
-  low_volatility_score: 55
-  risk_score: 40
-
-# OUTPUT FORMAT & SCHEMA
-Respond using TOON format (Token-Oriented Object Notation). Use `key: value` syntax and indentation for nesting.
-- **Keys**: Use the stock TICKER exactly as provided. **IMPORTANT**: If a ticker contains a hyphen or dot (e.g., `"BRK-B"`, `"BF.B"`), it **must** be enclosed in double quotes.
-- **Nesting**: Use 2 spaces for indentation of fields under each ticker.
-- **Schema Strictness**: The entire response must be a single, valid TOON object enclosed in a markdown code block like ` ```toon ... ``` `.
-
-## SCHEMA
-TICKER:
-  industry: "Yahoo Finance industry"
-  momentum_score: integer_1_to_100
-  low_volatility_score: integer_1_to_100
-  risk_score: integer_1_to_100
-
-## RULES
-- The output must be a single TOON object with a top-level key for each TICKER.
-- All scores must be integers between 1 and 100.
-- All fields must be present for each ticker.
-
-## EXAMPLE
-```toon
-NVDA:
-  industry: "Semiconductors"
-  momentum_score: 95
-  low_volatility_score: 25
-  risk_score: 65
-```
+# OUTPUT FORMAT
+Return a JSON object with a single field `stocks`: a list with one item per stock.
+- Each item has `ticker` (spelled exactly as provided) and `risk_score` (integer 1-100).
+- Every ticker in the input MUST appear exactly once.
+- Avoid clustering on multiples of 5: use the full integer range so the scores stay separable.
 """
+
+
+def _score_field() -> dict:
+    """
+    An integer score on the 1-100 scale.
+    """
+    return {"type": "integer", "minimum": 1, "maximum": 100}
+
+
+SCORES_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "stocks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string"},
+                    "risk_score": _score_field(),
+                },
+                "required": ["ticker", "risk_score"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["stocks"],
+    "additionalProperties": False,
+}

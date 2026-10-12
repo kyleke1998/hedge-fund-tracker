@@ -37,6 +37,9 @@ function mockFetch(url: string): Promise<Response> {
   if (urlStr.includes("stocks.csv")) return csv(MOCK_STOCKS_CSV);
   if (urlStr.includes("sector_hierarchy.csv")) return csv(MOCK_SECTOR_HIERARCHY_CSV);
   if (urlStr.includes("non_quarterly.csv")) return csv(MOCK_NON_QUARTERLY_CSV);
+  // No filing register: a database without one restates nothing.
+  if (urlStr.includes("filing_anomalies.csv"))
+    return Promise.resolve(new Response("", { status: 404 }));
 
   for (const [key, body] of Object.entries(FUND_CSVS)) {
     const [quarter, fund] = key.split("/");

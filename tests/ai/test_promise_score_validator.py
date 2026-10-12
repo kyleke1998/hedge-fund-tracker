@@ -1,112 +1,75 @@
 import unittest
 
-from app.ai.promise_score_validator import PromiseScoreValidator
+from app.ai.promise_score_validator import PromiseScoreValidator, normalize_weights
 
 
-class TestPromiseScoreValidatorInit(unittest.TestCase):
-    def test_stores_default_top_n_stocks(self):
+class TestValidateWeightValues(unittest.TestCase):
+    def test_accepts_finite_non_zero_weights_with_a_positive_one(self):
         """
-        Stores 30 as the default value for top_n_stocks.
+        Arbitrary magnitudes are fine: normalization happens downstream.
         """
-        validator = PromiseScoreValidator()
+        weights = {"Holder_Count": 3.0, "Net_Buyers": 0.4, "Seller_Count": -2.0}
 
-        self.assertEqual(validator.top_n_stocks, 30)
+        self.assertEqual(PromiseScoreValidator.validate_weight_values(weights), [])
 
-    def test_stores_default_weight_tolerance(self):
+    def test_rejects_a_zero_weight(self):
         """
-        Stores 0.05 as the default weight tolerance.
+        A zero weight means the metric should have been omitted.
         """
-        validator = PromiseScoreValidator()
+        errors = PromiseScoreValidator.validate_weight_values({"Holder_Count": 1.0, "Delta": 0.0})
 
-        self.assertEqual(validator.weight_tolerance, 0.05)
+        self.assertTrue(any("Delta" in e for e in errors))
 
-    def test_stores_custom_top_n_stocks(self):
+    def test_rejects_nan_and_infinite_weights(self):
         """
-        Stores the provided top_n_stocks value when given explicitly.
+        Non-finite weights would poison the normalization.
         """
-        validator = PromiseScoreValidator(top_n_stocks=10)
+        errors = PromiseScoreValidator.validate_weight_values(
+            {"Holder_Count": 1.0, "Delta": float("nan"), "Total_Value": float("inf")}
+        )
 
-        self.assertEqual(validator.top_n_stocks, 10)
+        self.assertTrue(any("Delta" in e for e in errors))
+        self.assertTrue(any("Total_Value" in e for e in errors))
 
-    def test_stores_custom_weight_tolerance(self):
+    def test_rejects_only_negative_weights(self):
         """
-        Stores the provided weight_tolerance value when given explicitly.
+        With no positive weight the score could only penalize selling.
         """
-        validator = PromiseScoreValidator(weight_tolerance=0.1)
+        errors = PromiseScoreValidator.validate_weight_values(
+            {"Seller_Count": -1.0, "Close_Count": -0.5}
+        )
 
-        self.assertEqual(validator.weight_tolerance, 0.1)
+        self.assertTrue(any("positive" in e for e in errors))
 
 
-class TestPromiseScoreValidatorValidateWeights(unittest.TestCase):
-    def test_returns_true_when_weights_sum_to_exactly_one(self):
+class TestNormalizeWeights(unittest.TestCase):
+    def test_divides_by_the_sum_of_absolute_values(self):
         """
-        Returns True when weights sum to exactly 1.0.
+        Positive-only weights become fractions of their total.
         """
-        weights = {"Total_Value": 0.5, "Delta": 0.5}
+        result = normalize_weights({"A": 3.0, "B": 1.0})
 
-        result = PromiseScoreValidator.validate_weights(weights)
+        self.assertAlmostEqual(result["A"], 0.75)
+        self.assertAlmostEqual(result["B"], 0.25)
 
-        self.assertTrue(result)
-
-    def test_returns_true_when_sum_within_default_tolerance(self):
+    def test_keeps_signs_with_mixed_weights(self):
         """
-        Returns True when the sum is within the default 0.05 tolerance (e.g. 0.98).
+        Absolute values sum to 1 and each sign survives.
         """
-        weights = {"Total_Value": 0.5, "Delta": 0.48}  # sum = 0.98
+        result = normalize_weights({"A": 6.0, "B": 2.0, "C": -2.0})
 
-        result = PromiseScoreValidator.validate_weights(weights)
+        self.assertAlmostEqual(result["A"], 0.6)
+        self.assertAlmostEqual(result["B"], 0.2)
+        self.assertAlmostEqual(result["C"], -0.2)
+        self.assertAlmostEqual(sum(abs(v) for v in result.values()), 1.0)
 
-        self.assertTrue(result)
-
-    def test_returns_true_when_sum_at_upper_tolerance_boundary(self):
+    def test_raises_when_there_is_nothing_to_normalize_by(self):
         """
-        Returns True when the sum equals exactly 1.0 + tolerance.
+        All-zero and empty mappings both have a zero absolute sum.
         """
-        weights = {"Total_Value": 0.5, "Delta": 0.55}  # sum = 1.05
-
-        result = PromiseScoreValidator.validate_weights(weights)
-
-        self.assertTrue(result)
-
-    def test_returns_true_when_sum_at_lower_tolerance_boundary(self):
-        """
-        Returns True when the sum equals exactly 1.0 - tolerance.
-        """
-        weights = {"Total_Value": 0.5, "Delta": 0.45}  # sum = 0.95
-
-        result = PromiseScoreValidator.validate_weights(weights)
-
-        self.assertTrue(result)
-
-    def test_returns_false_when_sum_exceeds_upper_tolerance(self):
-        """
-        Returns False when the sum exceeds 1.0 + tolerance.
-        """
-        weights = {"Total_Value": 0.6, "Delta": 0.5}  # sum = 1.1
-
-        result = PromiseScoreValidator.validate_weights(weights)
-
-        self.assertFalse(result)
-
-    def test_returns_false_when_sum_below_lower_tolerance(self):
-        """
-        Returns False when the sum is below 1.0 - tolerance.
-        """
-        weights = {"Total_Value": 0.4, "Delta": 0.4}  # sum = 0.8
-
-        result = PromiseScoreValidator.validate_weights(weights)
-
-        self.assertFalse(result)
-
-    def test_respects_custom_tolerance_parameter(self):
-        """
-        Uses the provided tolerance instead of the default 0.05.
-        """
-        weights = {"Total_Value": 0.7, "Delta": 0.5}  # sum = 1.2
-
-        result = PromiseScoreValidator.validate_weights(weights, tolerance=0.25)
-
-        self.assertTrue(result)
+        for weights in ({"A": 0.0, "B": 0.0}, {}):
+            with self.subTest(weights=weights), self.assertRaises(ValueError):
+                normalize_weights(weights)
 
 
 class TestPromiseScoreValidatorValidateWeightSigns(unittest.TestCase):
@@ -123,14 +86,16 @@ class TestPromiseScoreValidatorValidateWeightSigns(unittest.TestCase):
 
     def test_flags_positive_weight_on_selling_metric(self):
         """
-        A positive Seller_Count weight would reward institutional selling:
-        it must be reported as an offender.
+        A positive Seller_Count or Close_Count weight would reward institutional
+        selling: it must be reported as an offender.
         """
-        weights = {"Seller_Count": 0.6, "Holder_Count": 0.4}
+        for metric in ("Seller_Count", "Close_Count"):
+            with self.subTest(metric=metric):
+                result = PromiseScoreValidator.validate_weight_signs(
+                    {metric: 0.6, "Holder_Count": 0.4}
+                )
 
-        result = PromiseScoreValidator.validate_weight_signs(weights)
-
-        self.assertEqual(result, ["Seller_Count"])
+                self.assertEqual(result, [metric])
 
     def test_flags_negative_weight_on_positive_metric(self):
         """
@@ -143,28 +108,8 @@ class TestPromiseScoreValidatorValidateWeightSigns(unittest.TestCase):
 
         self.assertEqual(result, ["High_Conviction_Count"])
 
-    def test_flags_positive_close_count(self):
-        """
-        Close_Count is the other must-be-negative metric from the prompt.
-        """
-        weights = {"Close_Count": 0.2, "Holder_Count": 0.8}
-
-        result = PromiseScoreValidator.validate_weight_signs(weights)
-
-        self.assertEqual(result, ["Close_Count"])
-
 
 class TestPromiseScoreValidatorValidateMetrics(unittest.TestCase):
-    def test_returns_empty_list_when_all_metrics_are_valid(self):
-        """
-        Returns an empty list when every metric is in AVAILABLE_METRICS.
-        """
-        metrics = ["Total_Value", "Delta", "Buyer_Count"]
-
-        result = PromiseScoreValidator.validate_metrics(metrics)
-
-        self.assertEqual(result, [])
-
     def test_returns_invalid_metrics(self):
         """
         Returns a list containing only the unrecognized metric names.
@@ -190,6 +135,41 @@ class TestPromiseScoreValidatorValidateMetrics(unittest.TestCase):
         result = PromiseScoreValidator.validate_metrics(PromiseScoreValidator.AVAILABLE_METRICS)
 
         self.assertEqual(result, [])
+
+
+class TestValidateMetricCount(unittest.TestCase):
+    def test_accepts_counts_inside_the_range(self):
+        """
+        Returns an empty message for any count between MIN_METRICS and MAX_METRICS.
+        """
+        for count in range(
+            PromiseScoreValidator.MIN_METRICS, PromiseScoreValidator.MAX_METRICS + 1
+        ):
+            weights = {f"Metric{i}": 0.1 for i in range(count)}
+
+            self.assertEqual(PromiseScoreValidator.validate_metric_count(weights), "")
+
+    def test_rejects_too_few_metrics(self):
+        """
+        Returns an explanatory message naming the minimum when too few metrics are used.
+        """
+        weights = {f"Metric{i}": 0.2 for i in range(PromiseScoreValidator.MIN_METRICS - 1)}
+
+        message = PromiseScoreValidator.validate_metric_count(weights)
+
+        self.assertIn(str(PromiseScoreValidator.MIN_METRICS), message)
+        self.assertIn("minimum", message)
+
+    def test_rejects_too_many_metrics(self):
+        """
+        Returns an explanatory message naming the maximum when too many metrics are used.
+        """
+        weights = {f"Metric{i}": 0.05 for i in range(PromiseScoreValidator.MAX_METRICS + 1)}
+
+        message = PromiseScoreValidator.validate_metric_count(weights)
+
+        self.assertIn(str(PromiseScoreValidator.MAX_METRICS), message)
+        self.assertIn("maximum", message)
 
 
 if __name__ == "__main__":

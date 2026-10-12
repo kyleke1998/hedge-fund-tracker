@@ -239,6 +239,35 @@ class TestYFinance(unittest.TestCase):
         self.assertEqual(kwargs["end"], sunday + timedelta(days=1))
 
     @patch("app.stocks.libraries.yfinance.yf.download")
+    def test_get_last_price_in_range_takes_the_last_bar(self, mock_download):
+        """
+        One download over (start, end] returns the average of the last bar inside it.
+        """
+        df = pd.DataFrame(
+            {"High": [50.0, 44.0], "Low": [46.0, 36.0]},
+            index=[pd.Timestamp("2025-06-18"), pd.Timestamp("2025-06-20")],
+        )
+        mock_download.return_value = df
+        start, end = date(2025, 5, 15), date(2025, 8, 14)
+
+        price = YFinance.get_last_price_in_range("GONE", start, end)
+
+        self.assertEqual(price, 40.0)
+        mock_download.assert_called_once()
+        _, kwargs = mock_download.call_args
+        self.assertEqual(kwargs["start"], start + timedelta(days=1))
+        self.assertEqual(kwargs["end"], end + timedelta(days=1))
+
+    @patch("app.stocks.libraries.yfinance.yf.download")
+    def test_get_last_price_in_range_without_bars_is_none(self, mock_download):
+        """
+        An empty window returns None (after the international-suffix fallbacks).
+        """
+        mock_download.return_value = pd.DataFrame()
+        price = YFinance.get_last_price_in_range("GONE", date(2025, 5, 15), date(2025, 8, 14))
+        self.assertIsNone(price)
+
+    @patch("app.stocks.libraries.yfinance.yf.download")
     @patch("app.stocks.libraries.yfinance.yf.Ticker")
     def test_get_stocks_info(self, mock_yf_ticker, mock_download):
         """
@@ -272,6 +301,9 @@ class TestYFinance(unittest.TestCase):
         self.assertEqual(stocks_info["AAPL"]["sector"], "Technology")
         self.assertEqual(stocks_info["MSFT"]["price"], 300.0)
         self.assertEqual(stocks_info["MSFT"]["sector"], "Software")
+        # The industry is reported separately: the AI prompt refines a sector into one.
+        self.assertIsNone(stocks_info["AAPL"]["industry"])
+        self.assertEqual(stocks_info["MSFT"]["industry"], "Software")
 
     def test_get_stocks_info_empty_list(self):
         """
@@ -310,7 +342,58 @@ class TestYFinance(unittest.TestCase):
 
         stocks_info = YFinance.get_stocks_info.__wrapped__(["AAA"])
 
-        self.assertEqual(stocks_info, {"AAA": {"price": 10.0, "sector": None}})
+        self.assertEqual(stocks_info, {"AAA": {"price": 10.0, "sector": None, "industry": None}})
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_get_current_price_rate_limit_is_reraised(self, mock_ticker):
+        """
+        Exhausted retries surface YFRateLimitError itself, not tenacity's RetryError.
+        """
+        from yfinance.exceptions import YFRateLimitError
+
+        mock_ticker.side_effect = YFRateLimitError()
+
+        with (
+            patch.object(YFinance.get_current_price.retry, "sleep", lambda _s: None),
+            self.assertLogs("app.stocks.libraries.yfinance", level="ERROR"),
+            self.assertRaises(YFRateLimitError),
+        ):
+            YFinance.get_current_price("AAA")
+
+    @patch("app.stocks.libraries.yfinance.yf.download")
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_get_stocks_info_price_fallback_rate_limit_escapes(self, mock_ticker, mock_download):
+        """
+        A rate limit hit in the per-ticker price fallback aborts the batch instead of
+        being swallowed as a missing price.
+        """
+        from yfinance.exceptions import YFRateLimitError
+
+        mock_download.return_value = pd.DataFrame()
+        mock_ticker.side_effect = [MagicMock(info={})] + [YFRateLimitError()] * 5
+
+        with (
+            patch.object(YFinance.get_current_price.retry, "sleep", lambda _s: None),
+            self.assertLogs("app.stocks.libraries.yfinance", level="WARNING"),
+            self.assertRaises(YFRateLimitError),
+        ):
+            YFinance.get_stocks_info.__wrapped__(["AAA"])
+
+    @patch("app.stocks.libraries.yfinance.yf.download")
+    def test_get_stocks_info_exhausted_retries_reraise(self, mock_download):
+        """
+        After the final attempt the original error propagates, not RetryError.
+        """
+        from yfinance.exceptions import YFRateLimitError
+
+        mock_download.side_effect = YFRateLimitError()
+
+        with (
+            patch.object(YFinance.get_stocks_info.retry, "sleep", lambda _s: None),
+            self.assertLogs("app.stocks.libraries.yfinance", level="WARNING"),
+            self.assertRaises(YFRateLimitError),
+        ):
+            YFinance.get_stocks_info(["AAA"])
 
     @patch("app.stocks.libraries.yfinance.yf.Sector")
     def test_get_sector_tickers(self, mock_yf_sector):
@@ -410,45 +493,65 @@ class TestYFinance(unittest.TestCase):
             self.assertLessEqual(tickers.count("-V"), 1)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
-class TestYFinanceGetSplits(unittest.TestCase):
-    """
-    Split ex-dates back the price cache's invalidation of rows that a later
-    split has retroactively rescaled.
-    """
-
+class TestYFinanceSplits(unittest.TestCase):
     @patch("app.stocks.libraries.yfinance.yf.Ticker")
-    def test_returns_ex_dates_ascending(self, mock_ticker):
-        """
-        Returns each split's ex-date as a plain date, oldest first.
-        """
+    def test_returns_split_history_as_dates_and_factors(self, mock_ticker):
         mock_ticker.return_value.splits = pd.Series(
-            [4.0, 2.0],
-            index=pd.to_datetime(["2025-07-01", "2026-03-02"]),
+            [10.0, 2.0],
+            index=pd.to_datetime(["2025-11-17", "2026-03-04"]),
         )
 
-        splits = YFinance.get_splits("AAPL")
-
-        self.assertEqual(splits, [date(2025, 7, 1), date(2026, 3, 2)])
+        self.assertEqual(
+            YFinance.get_splits("NFLX"),
+            [(date(2025, 11, 17), 10.0), (date(2026, 3, 4), 2.0)],
+        )
 
     @patch("app.stocks.libraries.yfinance.yf.Ticker")
-    def test_returns_empty_list_when_never_split(self, mock_ticker):
-        """
-        A ticker with no split history returns an empty list.
-        """
-        mock_ticker.return_value.splits = pd.Series(dtype=float)
+    def test_returns_empty_list_when_a_ticker_never_split(self, mock_ticker):
+        mock_ticker.return_value.splits = pd.Series(dtype="float64")
 
         self.assertEqual(YFinance.get_splits("AAPL"), [])
 
     @patch("app.stocks.libraries.yfinance.yf.Ticker")
-    def test_returns_empty_list_on_failure(self, mock_ticker):
-        """
-        A network or parsing failure degrades to "no known splits" rather than
-        propagating — a failed check must not abort a backtest run.
-        """
-        mock_ticker.side_effect = Exception("Network error")
+    def test_returns_none_when_the_lookup_fails(self, mock_ticker):
+        mock_ticker.side_effect = RuntimeError("delisted")
 
-        self.assertEqual(YFinance.get_splits("AAPL"), [])
+        self.assertIsNone(YFinance.get_splits("GONE"))
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_sanitizes_share_class_tickers(self, mock_ticker):
+        mock_ticker.return_value.splits = pd.Series(dtype="float64")
+
+        YFinance.get_splits("BRK.B")
+
+        mock_ticker.assert_called_once_with("BRK-B")
+
+
+class TestYFinanceSharesOutstanding(unittest.TestCase):
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_the_listed_share_count(self, mock_ticker):
+        mock_ticker.return_value.info = {"sharesOutstanding": 39759402}
+
+        self.assertEqual(YFinance.get_shares_outstanding("GMTL"), 39759402)
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_none_when_the_field_is_missing(self, mock_ticker):
+        mock_ticker.return_value.info = {"shortName": "Nothing Inc"}
+
+        self.assertIsNone(YFinance.get_shares_outstanding("NONE"))
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_returns_none_when_the_lookup_fails(self, mock_ticker):
+        mock_ticker.side_effect = RuntimeError("delisted")
+
+        self.assertIsNone(YFinance.get_shares_outstanding("GONE"))
+
+    @patch("app.stocks.libraries.yfinance.yf.Ticker")
+    def test_rejects_a_non_positive_count(self, mock_ticker):
+        mock_ticker.return_value.info = {"sharesOutstanding": 0}
+
+        self.assertIsNone(YFinance.get_shares_outstanding("ZERO"))
+
+
+if __name__ == "__main__":
+    unittest.main()

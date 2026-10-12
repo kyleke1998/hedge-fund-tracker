@@ -11,18 +11,17 @@ Notes:
 from __future__ import annotations
 
 import argparse
-import sys
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 import app.database as _db
+from app.analysis.quarterly_report import generate_comparison
 from app.database.quarters import save_comparison
 from app.patterns import QUARTER_CAPTURE_RE
 from app.scraper.sec_scraper import fetch_latest_two_13f_filings
 from app.scraper.xml_processor import xml_to_dataframe_13f
-from app.analysis.quarterly_report import generate_comparison
-from app.utils.strings import parse_quarter, get_quarter_date, get_quarter
 from app.utils.logger import get_logger
+from app.utils.strings import get_quarter_date, parse_quarter
 
 logger = get_logger(__name__)
 

@@ -10,10 +10,11 @@ def stock_due_diligence_prompt(stock_context_toon: str) -> str:
     """
     return f"""
 # ROLE
-You are a senior hedge fund analyst with deep expertise in fundamental analysis, equity valuation, and risk assessment. Your task is to conduct a concise due diligence on a specific stock and provide a forward-looking perspective. You have access to real-time market data, news, and financial statements.
-Your core principle is that institutional activity is the most critical signal. These investors often have access to non-public or early information, making their trades a primary indicator. Your entire analysis must start from and be framed by the institutional data provided. Interpret all other data (financials, valuation, news) through the lens of what the "smart money" is doing.
+You are a senior hedge fund analyst with deep expertise in fundamental analysis, equity valuation, and risk assessment. Your task is to conduct a concise due diligence on a specific stock and provide a forward-looking perspective.
+Your data is the STOCK CONTEXT below plus your general knowledge of the company. You have no live market data, news feed, or financial statements. Never invent a figure you were not given; when a metric is unknown, say so or set the field to `null`.
+Your core principle is that institutional activity is the most critical signal. These investors often have access to non-public or early information, making their trades a primary indicator. Your entire analysis must start from and be framed by the institutional data provided. Interpret everything else you know about the company through the lens of what the "smart money" is doing.
 # TASK
-Perform a due diligence analysis for the stock provided below. Synthesize institutional activity data, price movement since the filing date, current market conditions, and fundamental company data to form a professional opinion on its potential over the next 3 months.
+Perform a due diligence analysis for the stock provided below. Synthesize institutional activity data, price movement since the filing date, and your general knowledge of the company's fundamentals to form a professional opinion on its potential over the next 3 months.
 
 ## STOCK CONTEXT
 All the necessary information about the stock to analyze is provided below in TOON format.
@@ -22,11 +23,11 @@ All the necessary information about the stock to analyze is provided below in TO
 ```
 
 # ANALYSIS REQUIREMENTS
-Your analysis must cover the following key areas. Be concise but insightful. For each section (except Business Summary), you must provide a sentiment indicator.
+Your analysis must cover the following key areas. Be concise but insightful.
 
 1.  **Business Summary**: Describe the company's operations, business model, and market position.
-2.  **Financial Health**: Briefly assess its financial stability. Mention key metrics like revenue growth, profitability (e.g., net margins), and debt levels (e.g., Debt-to-Equity ratio).
-3.  **Valuation**: Is the stock currently overvalued, undervalued, or fairly valued? Reference at least one common valuation multiple (e.g., P/E, P/S, EV/EBITDA) compared to its industry peers.
+2.  **Financial Health**: Briefly assess its financial stability. Mention metrics such as revenue growth, profitability (e.g., net margins) and debt levels only if you know them; never invent figures.
+3.  **Valuation**: Is the stock currently overvalued, undervalued, or fairly valued? Cite a valuation multiple versus peers only if you know it with confidence; otherwise assess valuation qualitatively.
 4.  **Growth VS Risks**: Weigh the primary growth catalysts against the main headwinds (risks). Your analysis must conclude whether the balance tips in favor of growth (Bullish), risks (Bearish), or is evenly matched (Neutral).
 5.  **Institutional Sentiment Interpretation**: Based on the provided institutional activity and the pre-calculated price action since the `filing_date` until the `current_date` (see `price_delta_percentage`), what is the "story"?
     - Pay special attention to **`high_conviction_new_entries`**: These are NEW positions that immediately jumped into a fund's Top 10 or >3% weighting.
@@ -39,61 +40,78 @@ Your analysis must cover the following key areas. Be concise but insightful. For
     -   Estimate a realistic price target for the next 3 months.
 
 # SENTIMENT INDICATOR
-For each analysis section below, provide a sentiment indicator:
+For each analysis section above except Business Summary, provide a sentiment indicator:
 - **Bullish**: Positive outlook / Favorable
 - **Neutral**: Mixed or neutral outlook
 - **Bearish**: Negative outlook / Unfavorable
 
 ## OUTPUT FORMAT
-Respond using TOON format (Token-Oriented Object Notation). Use `key: value` syntax and indentation for nesting.
-- **Keys**: Use the exact field names shown in the SCHEMA below as top-level keys (e.g. `ticker`, `company`, `analysis`, `investment_thesis`). The TICKER symbol is the VALUE of the `ticker` field — do NOT nest the response under a key named after the ticker.
-- **No extra top-level keys**: Do not add `checklist`, preamble, or any keys not in the SCHEMA.
-- **Values**: Enclose all string values in double quotes (`"..."`).
-- **Schema Strictness**: The entire response must be a single, valid TOON object enclosed in a markdown code block like ` ```toon ... ``` `.
-- **No Preamble**: Do NOT include any text, analysis, or conversational filler outside the markdown code block.
+Return a JSON object with these fields:
+- `ticker` and `company`: the stock's ticker symbol and company name.
+- `analysis`: `business_summary`, `financial_health`, `valuation`, `growth_vs_risks` and `institutional_sentiment` (one string per section above), plus `financial_health_sentiment`, `valuation_sentiment`, `growth_vs_risks_sentiment` and `institutional_sentiment_sentiment`.
+- `investment_thesis`: `overall_sentiment`, `thesis` and `price_target`.
 
-### SCHEMA
-ticker: "..."
-company: "..."
-analysis:
-  business_summary: "..."
-  financial_health: "..."
-  financial_health_sentiment: "Bullish/Neutral/Bearish"
-  valuation: "..."
-  valuation_sentiment: "Bullish/Neutral/Bearish"
-  growth_vs_risks: "..."
-  growth_vs_risks_sentiment: "Bullish/Neutral/Bearish"
-  institutional_sentiment: "..."
-  institutional_sentiment_sentiment: "Bullish/Neutral/Bearish"
-investment_thesis:
-  overall_sentiment: "Bullish/Neutral/Bearish"
-  thesis: "..."
-  price_target: "..."
-
+Rules:
 - Complete all listed fields. If data is missing/unavailable, set the value to `null`.
 - Sentiment fields must be "Bullish", "Neutral", or "Bearish", or `null` if unavailable.
 - `price_target`: string formatted as USD (e.g., "$145") or `null` if not applicable/uncertain.
 - If institutional activity data is unavailable, set `institutional_sentiment` and `institutional_sentiment_sentiment` to `null`.
 - If any analysis section cannot be completed, set its value, including its sentiment, to `null`.
-After generating the TOON output, validate it against the schema for required fields and correct types, and ensure sentiment fields and price_target meet format requirements. If validation fails, self-correct and regenerate the output.
-
-# EXAMPLE OUTPUT STRUCTURE
-```toon
-ticker: "NVDA"
-company: "NVIDIA Corp"
-analysis:
-  business_summary: "NVIDIA is a leader in designing GPUs for gaming, professional markets, and data centers, with a dominant position in the AI and machine learning space."
-  financial_health: "Exhibits explosive revenue growth and high net margins. Debt levels are manageable relative to its strong cash flow."
-  financial_health_sentiment: "Bullish"
-  valuation: "Trades at a premium P/E ratio, reflecting high growth expectations. While historically high, it is often considered justified by its market leadership in AI."
-  valuation_sentiment: "Neutral"
-  growth_vs_risks: "While catalysts like AI adoption and the Blackwell architecture are strong, the high valuation and geopolitical risks create significant headwinds. The balance currently appears slightly tilted towards risk."
-  growth_vs_risks_sentiment: "Bearish"
-  institutional_sentiment: "Despite some profit-taking, it remains a core holding for many growth-oriented funds, indicating continued long-term belief in its AI dominance."
-  institutional_sentiment_sentiment: "Bullish"
-investment_thesis:
-  overall_sentiment: "Bullish"
-  thesis: "Bullish on continued AI leadership. The stock's premium valuation is warranted by its superior growth profile and market position, though investors should be mindful of volatility."
-  price_target: "$145"
-```
 """
+
+
+SENTIMENTS: tuple[str, ...] = ("Bullish", "Neutral", "Bearish")
+
+
+def _text() -> dict:
+    """
+    A nullable free-text field.
+    """
+    return {"type": ["string", "null"]}
+
+
+def _sentiment() -> dict:
+    """
+    A nullable sentiment indicator.
+    """
+    return {"type": ["string", "null"], "enum": [*SENTIMENTS, None]}
+
+
+def _closed_object(properties: dict) -> dict:
+    """
+    An object whose listed properties are all required and no others are allowed.
+    """
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+DUE_DILIGENCE_SCHEMA: dict = _closed_object(
+    {
+        "ticker": {"type": "string"},
+        "company": {"type": "string"},
+        "analysis": _closed_object(
+            {
+                "business_summary": _text(),
+                "financial_health": _text(),
+                "financial_health_sentiment": _sentiment(),
+                "valuation": _text(),
+                "valuation_sentiment": _sentiment(),
+                "growth_vs_risks": _text(),
+                "growth_vs_risks_sentiment": _sentiment(),
+                "institutional_sentiment": _text(),
+                "institutional_sentiment_sentiment": _sentiment(),
+            }
+        ),
+        "investment_thesis": _closed_object(
+            {
+                "overall_sentiment": _sentiment(),
+                "thesis": _text(),
+                "price_target": _text(),
+            }
+        ),
+    }
+)

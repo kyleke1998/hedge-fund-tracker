@@ -7,19 +7,19 @@ allowing `from app.ai.clients import GoogleAIClient, GroqClient`, etc.
 
 from app.ai.clients.base_client import AIClient
 from app.ai.clients.base_openai_client import OpenAIClient
-from app.ai.clients.github_client import GitHubClient
 from app.ai.clients.google_client import GoogleAIClient
 from app.ai.clients.groq_client import GroqClient
-from app.ai.clients.huggingface_client import HuggingFaceClient
+from app.ai.clients.ollama_client import OllamaClient
 from app.ai.clients.openrouter_client import OpenRouterClient
+from app.ai.clients.zai_client import ZaiClient
 
 # Defines the public API of this package
 __all__ = [
     "AIClient",
-    "GitHubClient",
     "OpenAIClient",
     "GoogleAIClient",
     "GroqClient",
-    "HuggingFaceClient",
+    "OllamaClient",
     "OpenRouterClient",
+    "ZaiClient",
 ]

@@ -23,11 +23,11 @@ from pathlib import Path
 import pandas as pd
 
 from app.ai.clients import (
-    GitHubClient,
     GoogleAIClient,
     GroqClient,
-    HuggingFaceClient,
+    OllamaClient,
     OpenRouterClient,
+    ZaiClient,
 )
 from app.utils.logger import get_logger
 
@@ -38,7 +38,8 @@ _stocks_thread_lock = threading.Lock()
 _filing_dates_thread_lock = threading.Lock()
 
 
-DB_FOLDER = "./database"
+# Anchored to the repo root (like app/api/paths.py) so every process locks the same stocks.csv.
+DB_FOLDER = str(Path(__file__).resolve().parents[2] / "database")
 # Oldest reporting period tracked by the database; fetch/regeneration tooling
 # skips filings referring to earlier quarters.
 MIN_REFERENCE_DATE = "2022-03-31"
@@ -53,6 +54,9 @@ REGIME_FILE = "regime.csv"
 CORRELATION_FILE = "correlation.csv"
 MOMENTUM_FILE = "momentum.csv"
 FILING_DATES_FILE = "filing_dates.csv"
+FUND_PERFORMANCE_FILE = "fund_performance.csv"
+FILING_ANOMALIES_FILE = "filing_anomalies.csv"
+SPLITS_FILE = "splits.csv"
 
 
 def _get_db_root() -> Path:
@@ -103,14 +107,24 @@ def load_models(filepath: str | None = None) -> list:
     if filepath is None:
         filepath = str(Path(DB_FOLDER) / MODELS_FILE)
     client_map = {
-        "GitHub": GitHubClient,
         "Google": GoogleAIClient,
         "Groq": GroqClient,
-        "HuggingFace": HuggingFaceClient,
+        "Ollama": OllamaClient,
         "OpenRouter": OpenRouterClient,
+        "ZAI": ZaiClient,
     }
     try:
         df = pd.read_csv(filepath, keep_default_na=False)
+        # Rows naming a retired/unknown provider are dropped rather than
+        # yielding a NaN client that blows up at call time.
+        unknown = ~df["Client"].isin(client_map)
+        if unknown.any():
+            logger.warning(
+                "Skipping %d model(s) with unsupported client(s): %s",
+                int(unknown.sum()),
+                sorted(set(df.loc[unknown, "Client"])),
+            )
+            df = df[~unknown]
         df["Client"] = df["Client"].map(client_map)
         return df.to_dict("records")
     except Exception:
@@ -122,5 +136,7 @@ def load_models(filepath: str | None = None) -> list:
 # Imported last: submodules do `import app.database as _db` and read the
 # constants/helpers above at call time, so the partially-initialised package is fine.
 from app.database.funds import *  # noqa: E402,F401,F403
+from app.database.locks import *  # noqa: E402,F401,F403
 from app.database.quarters import *  # noqa: E402,F401,F403
+from app.database.splits import *  # noqa: E402,F401,F403
 from app.database.stocks import *  # noqa: E402,F401,F403
