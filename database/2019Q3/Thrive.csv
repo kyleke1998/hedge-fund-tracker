@@ -1,0 +1,7 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+98954M200,Z,Zillow Group Inc,935624,935624,27.9M,27.9M,NEW,22.1%
+98980L101,ZM,Zoom Video Communications Inc,300000,0,22.86M,0,NO CHANGE,18.1%
+83088V102,,Slack Technologies Inc,585785,0,13.9M,0,NO CHANGE,11%
+M4R82T106,FVRR,Fiverr International Ltd,60572,0,1.13M,0,NO CHANGE,0.9%
+594918104,MSFT,Microsoft Corporation,433023,-342897,60.2M,-47.67M,-44.2%,47.8%
+Total,,,,,126M,-19.77M,-12.8%,100%

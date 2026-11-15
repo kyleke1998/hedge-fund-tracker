@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LineChart as LineChartIcon, Info, Check, AlertTriangle } from "lucide-react";
+import { LineChart as LineChartIcon, Check, AlertTriangle } from "lucide-react";
 import EquityCurveChart from "@/components/EquityCurveChart";
 import CompositionPanel from "@/components/CompositionPanel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,14 +9,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { QueryState } from "@/components/ui/QueryState";
 import { TableFrame } from "@/components/ui/TableFrame";
-import { PanelTitle } from "@/components/ui/PanelTitle";
+import { Panel } from "@/components/ui/Panel";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { FaqLink } from "@/components/ui/TextLink";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { PERFORMANCE_PAGE } from "@/lib/pageMeta";
 import { canonicalUrl } from "@/lib/seo";
 import { seriesColor } from "@/lib/seriesColors";
 import { getPerformance, type PerfSeries } from "@/lib/dataService";
 import { STRATEGY_BY_ID, perfOrderIndex } from "@/lib/strategies";
-import { pctFrac, pp, toneClass } from "@/lib/performanceFormat";
+import { pctFrac, pp } from "@/lib/performanceFormat";
+import { toneClass } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 
 const OUTPERFORM = "hsl(var(--positive))";
@@ -63,9 +66,8 @@ function LegendRow({
   );
   return (
     <tr
-      // The whole row is the click target (TradingView-style). The single
-      // focusable control stays the button below, so no role/tabIndex here;
-      // clicks originating inside it are ignored to avoid toggling twice.
+      // The whole row is the click target. The single focusable control stays
+      // the button below; ignore its click here to avoid toggling twice.
       onClick={
         onToggle
           ? (event) => {
@@ -112,12 +114,12 @@ function LegendRow({
           <span className="inline-flex items-center h-8 text-muted-foreground">{name}</span>
         )}
       </td>
-      <td className={cn("py-1 px-2 text-right", toneClass(series.cumReturn))}>
+      <td className={cn("py-1 px-2 text-right whitespace-nowrap", toneClass(series.cumReturn))}>
         {pctFrac(series.cumReturn)}
       </td>
       <td
         className={cn(
-          "py-1 px-2 text-right",
+          "py-1 px-2 text-right whitespace-nowrap",
           series.excessPp == null ? "text-muted-foreground" : toneClass(series.excessPp),
         )}
       >
@@ -178,19 +180,15 @@ export default function StrategyPerformance() {
 
   const startDate = data?.startDate ?? "";
   const windows = data?.quarters?.length ?? 0;
+  const lastQuarter = data?.quarters.at(-1) ?? "";
 
   return (
     <div className="space-y-6 max-w-screen-2xl">
-      <div>
-        <h1 className="page-title">
-          <LineChartIcon aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
-          Strategy Performance
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
-          How each consensus screen would have performed, rebalanced every quarter and held to the
-          next, against the S&amp;P 500.
-        </p>
-      </div>
+      <PageHeader
+        title="Strategy Performance"
+        icon={LineChartIcon}
+        description="A descriptive backtest of each consensus screen, rebalanced quarterly and held to the next window, against the S&P 500."
+      />
 
       <div className="rounded-lg border border-warning/20 bg-warning/5 p-4 flex gap-3 items-start">
         <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
@@ -232,13 +230,22 @@ export default function StrategyPerformance() {
         />
       ) : (
         <>
-          {/* items-stretch + h-full on both frames: the taller column sets the
-              row height, so the two bottom rules land on the same line. */}
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-stretch">
-            <div className="frame flex flex-col h-full overflow-hidden">
-              <div className="frame-title frame-title--spaced">
-                <PanelTitle>Series</PanelTitle>
-              </div>
+          <div className="space-y-2 border-y border-border py-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">
+              {longDate(startDate)} → {lastQuarter} exit · {windows} completed window
+              {windows === 1 ? "" : "s"}
+            </p>
+            <p className="max-w-3xl">
+              A tiny, single-regime sample, using a fund roster preselected on past performance.
+              These results describe this window; they do not establish an investing edge.{" "}
+              <FaqLink item="how-strategy-performance-is-backtested">
+                Backtest method &amp; limits
+              </FaqLink>
+            </p>
+          </div>
+          {/* Mobile keeps the plot and its compact controls together, before the detail table. */}
+          <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <Panel title="Series" spaced className="order-2 flex h-full flex-col md:order-1">
               <TableFrame label="Strategy legend and series toggle">
                 <table className="w-full text-sm" aria-label="Strategy legend and series toggle">
                   <thead>
@@ -250,10 +257,10 @@ export default function StrategyPerformance() {
                         Return
                       </th>
                       <th scope="col" className="text-right py-1 px-2">
-                        vs S&amp;P
+                        vs S&amp;P (pp)
                       </th>
                       <th scope="col" className="text-right py-1 px-2 hidden sm:table-cell">
-                        Vol
+                        Vol (qtr)
                       </th>
                       <th scope="col" className="text-right py-1 pl-2 pr-3 hidden sm:table-cell">
                         Beats
@@ -281,6 +288,10 @@ export default function StrategyPerformance() {
                   </tbody>
                 </table>
               </TableFrame>
+              <p className="px-3 pt-2 text-xs text-muted-foreground">
+                Excess is in percentage points (pp). Volatility is the variation in quarterly
+                returns, not annualized. Beats counts windows ahead of the S&amp;P 500.
+              </p>
               <p className="px-3 pb-3 pt-2 text-xs text-muted-foreground">
                 {focusedSeries ? (
                   <>
@@ -297,25 +308,64 @@ export default function StrategyPerformance() {
                   "Select a strategy to isolate it against the S&P 500 and see its holdings."
                 )}
               </p>
-            </div>
+            </Panel>
 
-            <div className="frame flex flex-col h-full overflow-hidden">
-              <div className="frame-title frame-title--spaced">
-                <PanelTitle>Cumulative return</PanelTitle>
-              </div>
+            <Panel
+              title="Cumulative return"
+              spaced
+              className="order-1 flex h-full flex-col md:order-2"
+              aside={<span className="hidden md:block">Hover to compare</span>}
+            >
               <div className="flex-1 min-h-0 p-3 pt-0">
                 <EquityCurveChart
                   series={visible}
                   quarters={data?.quarters ?? []}
                   originLabel={data?.startQuarter}
                   band={band}
+                  endLabels
+                  className="h-[260px] min-h-[260px] md:h-full md:min-h-[340px]"
                 />
               </div>
-            </div>
+              <div
+                role="group"
+                aria-label="Chart series"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 pb-3 md:hidden"
+              >
+                {strategies.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-pressed={focused === s.id}
+                    onClick={() => setFocused((prev) => (prev === s.id ? null : s.id))}
+                    className={cn(
+                      "inline-flex min-h-8 items-center gap-1.5 rounded-sm text-xs hover:text-foreground",
+                      focused === s.id ? "font-semibold text-foreground" : "text-muted-foreground",
+                      focusedSeries && focused !== s.id && "opacity-50",
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-2 w-2 shrink-0"
+                      style={{ backgroundColor: seriesColor(s.id) }}
+                    />
+                    {s.label}
+                  </button>
+                ))}
+                {benchmark && (
+                  <span className="inline-flex min-h-8 items-center gap-1.5 text-xs text-muted-foreground">
+                    <span
+                      aria-hidden="true"
+                      className="h-2 w-2 shrink-0"
+                      style={{ backgroundColor: seriesColor(benchmark.id) }}
+                    />
+                    {benchmark.label}
+                  </span>
+                )}
+              </div>
+            </Panel>
           </div>
 
-          {/* The headline figure, its sample and the disclaimer share one status
-              line: the number means nothing without the sample it comes from. */}
+          {/* The isolated strategy's comparison follows the chart; sample limits stay above it. */}
           <p className="status-line border-t border-border pt-3 text-muted-foreground">
             {focusedSeries && focusedSeries.excessPp != null ? (
               <>
@@ -324,36 +374,11 @@ export default function StrategyPerformance() {
                   {pp(focusedSeries.excessPp)}
                 </span>{" "}
                 vs the S&amp;P 500 ({pctFrac(focusedSeries.cumReturn)} against{" "}
-                {benchmark ? pctFrac(benchmark.cumReturn) : "—"}), in a descriptive backtest since{" "}
-                {startDate} ({longDate(startDate)}), {windows} window
-                {windows === 1 ? "" : "s"}, single regime.
+                {benchmark ? pctFrac(benchmark.cumReturn) : "—"}).
               </>
             ) : (
-              <>
-                Descriptive backtest since {startDate} ({longDate(startDate)}), the earliest 13F in
-                the data, {windows} window{windows === 1 ? "" : "s"}, single regime. Benchmark in
-                grey.
-              </>
-            )}{" "}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="How this is measured"
-                  className="inline-flex items-center justify-center h-6 w-6 align-middle text-muted-foreground hover:text-foreground"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px] text-xs font-normal leading-relaxed">
-                Entered the day after each quarter's 13F deadline (quarter-end + 46 days — most
-                funds file on the deadline itself, often after the close, so trading that day would
-                be look-ahead bias), held to the next entry, then rebalanced. Conviction-weighted by
-                average portfolio weight, vs the S&amp;P 500. Only fully-elapsed quarters are shown,
-                so the sample is small.
-              </TooltipContent>
-            </Tooltip>{" "}
-            <span aria-hidden="true">·</span> Not investment advice
+              <>All strategies shown against the S&amp;P 500 benchmark in grey.</>
+            )}
           </p>
 
           {focusedSeries && <CompositionPanel strategyId={focusedSeries.id} />}

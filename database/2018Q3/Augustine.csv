@@ -1,0 +1,77 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+958102105,WDC,Western Digital (wdc),55960,22719,3.27M,1.33M,+68.3%,1.8%
+071734107,BHC,Bausch Health Cos (bhc),8200,8200,210K,210K,NEW,0.12%
+858375108,,Stein Mart Inc (smrt),72024,72024,169K,169K,NEW,0.09%
+369604103,GE,General Electric (ge),27355,7660,308K,86.25K,+38.9%,0.17%
+172967424,C,Citigroup Inc (c),96686,968,6.94M,69.44K,+1%,3.8%
+594918104,MSFT,Microsoft Corp (msft),98018,595,11.21M,68.05K,+0.6%,6.2%
+D0712D163,BAYN.DE,Bayer AG-REG (bayzf),2569,750,227K,66.27K,+41.2%,0.13%
+30303M102,META,Facebook Inc-A (fb),2622,300,431K,49.31K,+12.9%,0.24%
+458140100,INTC,Intel Corp (intc),98335,852,4.65M,40.29K,+0.9%,2.6%
+037833100,AAPL,Apple Inc (aapl),63967,155,14.44M,34.99K,+0.2%,8%
+780259206,,Royal Dutch Shell (rdsa),10879,288,741K,19.62K,+2.7%,0.41%
+G6095L109,,Aptiv (aptv),66635,222,5.59M,18.62K,+0.3%,3.1%
+278865100,ECL,Ecolab Inc (ecl),22133,111,3.47M,17.4K,+0.5%,1.9%
+45104G104,IBN,Icici Bank (ibn),490126,2012,4.16M,17.08K,+0.4%,2.3%
+78463V107,GLD,Spdr Gold Tr Spdr (gld),48262,121,5.44M,13.64K,+0.3%,3%
+46625H100,JPM,Jpmorgan Chase & Co (jpm),42926,98,4.84M,11.06K,+0.2%,2.7%
+031162100,AMGN,Amgen Inc (amgn),25636,39,5.31M,8.08K,+0.2%,2.9%
+88023U101,SGI,Tempur Sealy International (tp,26707,80,1.41M,4.23K,+0.3%,0.78%
+013872106,AA,Alcoa (aa),33361,90,1.35M,3.63K,+0.3%,0.75%
+14309L102,CG,The Carlyle Group (cg),75672,143,1.71M,3.22K,+0.2%,0.95%
+912909108,X,US Steel Corp (x),49912,90,1.52M,2.74K,+0.2%,0.84%
+084670108,BRK.A,Berkshire Hathaway (brka),7,0,2.24M,0,NO CHANGE,1.2%
+17133Q502,CHT,Chunghwa Telecm (cht),43303,0,1.55M,0,NO CHANGE,0.86%
+Y1100L160,CPAMF,Capitamall Trust (cpamf),810998,0,1.32M,0,NO CHANGE,0.73%
+026590361,,Singapore Tele (sngnf),524267,0,1.24M,0,NO CHANGE,0.69%
+03027X100,AMT,American Tower (amt),7000,0,1.02M,0,NO CHANGE,0.56%
+05946K101,BBVA,Banco Bilbao Argen Adr (bbva),153503,0,967K,0,NO CHANGE,0.54%
+TH0143010,,Land & Houses Pub Co (ldxhf),2359262,0,838K,0,NO CHANGE,0.46%
+084670702,BRK.B,Berkshire Hathaway (brk/b),3595,0,769K,0,NO CHANGE,0.43%
+060505104,BAC,Bank Of America Corp (bac),20216,0,595K,0,NO CHANGE,0.33%
+824596100,SHG,Shinhan Finl Grp Ltd Sp Adr (s,14543,0,583K,0,NO CHANGE,0.32%
+984245100,YPF,YPF SA (ypf),29888,0,461K,0,NO CHANGE,0.26%
+68389X105,ORCL,Oracle Corp (orcl),8860,0,456K,0,NO CHANGE,0.25%
+670346105,NUE,Nucor (nue),5300,0,336K,0,NO CHANGE,0.19%
+898402102,TRMK,Trustmark (trmk),9542,0,321K,0,NO CHANGE,0.18%
+70450Y103,PYPL,Paypal Holdings Inc (pypl),3164,0,277K,0,NO CHANGE,0.15%
+713448108,PEP,Pepsico Inc (pep),2195,0,245K,0,NO CHANGE,0.14%
+806857108,SLB,Schlumberger Ltd (slb),3883,0,236K,0,NO CHANGE,0.13%
+715684106,TLK,Telekomunik Indonesia (tlk),75913,-2,1.86M,-48.95,-0%,1%
+66561Y107,,Northern Pwr Sys (nrthf),0,-23599,0,-1K,CLOSE,0%
+891906109,,Total System Services (tss),54083,-34,5.34M,-3.36K,-0.1%,3%
+876030107,TPR,Tapestry Inc (tpr),124289,-78,6.25M,-3.92K,-0.1%,3.5%
+17275R102,CSCO,Cisco Systems Inc (csco),20704,-87,1.01M,-4.23K,-0.4%,0.56%
+969457100,WMB,Williams Co (wmb),13403,-158,364K,-4.29K,-1.2%,0.2%
+16941M109,,China Mobile Ltd (chl),20722,-98,1.01M,-4.79K,-0.5%,0.56%
+20825C104,COP,Conoco Phillips (cop),38691,-63,2.99M,-4.88K,-0.2%,1.7%
+949746101,WFC,Wells Fargo (wfc),18509,-110,972K,-5.78K,-0.6%,0.54%
+126408103,CSX,Csx Corp (csx),31912,-83,2.36M,-6.15K,-0.3%,1.3%
+131193104,CALY,Callaway Golf (ely),107134,-282,2.6M,-6.85K,-0.3%,1.4%
+09253U108,,Blackstone Grp (bx),17215,-191,655K,-7.27K,-1.1%,0.36%
+874039100,TSM,Taiwan Semiconductor (tsm),150957,-170,6.67M,-7.51K,-0.1%,3.7%
+867224107,SU,Suncor Energy (su),104066,-222,4.03M,-8.59K,-0.2%,2.2%
+291011104,EMR,Emerson Electric Co (emr),14352,-145,1.1M,-11.1K,-1%,0.61%
+464285105,IAU,Ishares Gold Trust (iau),106640,-1061,1.22M,-12.12K,-1%,0.67%
+293792107,EPD,Enterprise Prod Ptnrs LP (epd),32241,-444,926K,-12.75K,-1.4%,0.51%
+58933Y105,MRK,Merck & Co (mrk),98815,-189,7.01M,-13.41K,-0.2%,3.9%
+30231G102,XOM,Exxon Mobil Corp (xom),15373,-174,1.31M,-14.79K,-1.1%,0.72%
+375558103,GILD,Gilead Sciences Inc (gild),54466,-214,4.21M,-16.52K,-0.4%,2.3%
+G5960L103,MDT,Medtronic Plc (mdt),44777,-185,4.4M,-18.2K,-0.4%,2.4%
+717081103,PFE,Pfizer Inc (pfe),40535,-446,1.79M,-19.65K,-1.1%,0.99%
+G2709G107,,Delphi Technologies (dlph),21735,-638,681K,-19.99K,-2.9%,0.38%
+191216100,KO,Coca-Cola Co/The (ko),27081,-544,1.25M,-25.11K,-2%,0.69%
+00206R102,T,At&T Inc (t),27909,-787,937K,-26.42K,-2.7%,0.52%
+Y6028G136,MTPOF,Metro Bk & Tr (mtpof),2178152,-44327,2.7M,-54.97K,-2%,1.5%
+60871R209,TAP,Molson Coors Brewing Co (tap),5636,-948,346K,-58.2K,-14.4%,0.19%
+459200101,IBM,Intl Business Machines Corp (i,31713,-442,4.79M,-66.83K,-1.4%,2.7%
+127097103,CTRA,Cabot Oil & Gas (cog),108904,-3039,2.45M,-68.42K,-2.7%,1.4%
+000375204,ABBNY,ABB Ltd (abb),41903,-3059,990K,-72.27K,-6.8%,0.55%
+460146103,IP,International Paper Co (ip),32938,-1484,1.62M,-72.9K,-4.3%,0.9%
+109043109,,Briggs & Stratton (bgg),117773,-3847,2.26M,-73.95K,-3.2%,1.3%
+16939P106,,China Life Insurance (lfc),288091,-9659,3.28M,-110K,-3.2%,1.8%
+404280406,HSBC,HSBC Holdings (hsbc),88859,-2908,3.91M,-127.89K,-3.2%,2.2%
+09062X103,BIIB,Biogen Inc (biib),9034,-610,3.19M,-215.46K,-6.3%,1.8%
+654106103,NKE,Nike Inc -Cl B (nke),37643,-13438,3.19M,-1.14M,-26.3%,1.8%
+962166104,WY,Weyerhaeuser Co (wy),0,-46223,0,-1.68M,CLOSE,0%
+Total,,,,,180.52M,-1.76M,-1%,100%

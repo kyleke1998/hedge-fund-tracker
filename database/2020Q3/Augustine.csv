@@ -1,0 +1,87 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+46428Q109,SLV,Ishares Silver Trust(slv),157958,157958,3.42M,3.42M,NEW,2%
+294821608,ERIC,Ericsson (LM) Tel-Sp ADR (eric,223772,223772,2.44M,2.44M,NEW,1.4%
+05946K101,BBVA,Banco Bilbao Argen Adr (bbva),46765,46765,128K,128K,NEW,0.08%
+46137V241,SPHQ,Invesco S&P 500 High Q(sphq),7702,979,298K,37.88K,+14.6%,0.17%
+023135106,AMZN,Amazon.Com Inc (amzn),85,9,268K,28.38K,+11.8%,0.16%
+80105N105,SNY,Sanofi-Aventis (sny),10781,192,541K,9.63K,+1.8%,0.32%
+713448108,PEP,Pepsico Inc (pep),1883,38,261K,5.27K,+2.1%,0.15%
+22052L104,CTVA,Corteva Inc (ctva),12054,54,347K,1.55K,+0.4%,0.2%
+03027X100,AMT,American Tower Corp (amt),7097,3,1.72M,725.38,+0%,1%
+254687106,DIS,Walt Disney Co/The (dis),5912,5,734K,620.77,+0.1%,0.43%
+084670108,BRK.A,Berkshire Hathaway (brka),7,0,2.24M,0,NO CHANGE,1.3%
+351858105,FNV,Franco Nevada Corp (fnv),4200,0,586K,0,NO CHANGE,0.34%
+46138E800,CQQQ,Invesco ETF TR II China Tech (,7292,0,504K,0,NO CHANGE,0.3%
+369550108,GD,General Dynamics (gd),2820,0,390K,0,NO CHANGE,0.23%
+302491303,FMC,FMC (fmc),3550,0,376K,0,NO CHANGE,0.22%
+922908769,VTI,Vanguard Total Stock Mkt ETF (,1306,0,222K,0,NO CHANGE,0.13%
+898402102,TRMK,Trustmark (trmk),9542,0,204K,0,NO CHANGE,0.12%
+127097103,CTRA,Cabot Oil & Gas (cog),11000,0,191K,0,NO CHANGE,0.11%
+726503105,PAA,Pipeline (paa),16020,0,96K,0,NO CHANGE,0.06%
+931142103,WMT,Wal-Mart Stores Inc (wmt),1817,-11,254K,-1.54K,-0.6%,0.15%
+084670702,BRK.B,Berkshire Hathaway (brk/b),2104,-14,448K,-2.98K,-0.7%,0.26%
+10552T107,BRFS,BRF SA-ADR (brfs),23559,-985,77K,-3.22K,-4%,0.05%
+984245100,YPF,YPF SA (ypf),22485,-976,80K,-3.47K,-4.2%,0.05%
+110122157,,Bristol-Myers Squibb-CVR,36002,-1625,81K,-3.66K,-4.3%,0.05%
+880198106,SABA,Templeton Global Incm Fd (gim),12058,-742,65K,-4K,-5.8%,0.04%
+059578104,BDORY,Banco do Brasil SA Spon ADR (b,20999,-876,113K,-4.71K,-4%,0.07%
+71654V408,PBR,Petroleo Brasileiro ADR (pbr),16137,-763,115K,-5.44K,-4.5%,0.07%
+247916208,,Denbury Resources (dnr),0,-25000,0,-7K,CLOSE,0%
+92242Y100,,Vedanta Ltd. ADR (vedl),22000,-959,163K,-7.11K,-4.2%,0.1%
+400501102,OMAB,Grupo Aeroportuario Cen ADR (o,6067,-260,223K,-9.56K,-4.1%,0.13%
+97651M109,WIT,Wipro Ltd-ADR (wit),53313,-2242,251K,-10.56K,-4%,0.15%
+824596100,SHG,Shinhan Finl Grp Ltd Sp Adr (s,10981,-500,252K,-11.47K,-4.4%,0.15%
+437076102,HD,Home Depot Inc (hd),853,-48,237K,-13.34K,-5.3%,0.14%
+256135203,RDY,Dr Reddys Labs (rdy),4945,-207,344K,-14.4K,-4%,0.2%
+858375108,,Stein Mart Inc (smrt),0,-72024,0,-30K,CLOSE,0%
+30231G102,XOM,Exxon Mobil Corp (xom),17675,-910,607K,-31.25K,-4.9%,0.36%
+871829107,SYY,Sysco Corp (syy),5342,-530,332K,-32.94K,-9%,0.19%
+293792107,EPD,Enterprise Prod Ptnrs LP (epd),36348,-2252,574K,-35.56K,-5.8%,0.34%
+89832Q109,TFC,Truist Financial Corp (tfc),12231,-948,465K,-36.04K,-7.2%,0.27%
+517834107,LVS,Las Vegas Sands (lvs),7836,-777,366K,-36.29K,-9%,0.21%
+92334N103,VEOEY,Veolia Environment - ADR (veoe,16422,-1697,355K,-36.68K,-9.4%,0.21%
+126650100,CVS,Cvs Health Corp (cvs),13191,-645,770K,-37.65K,-4.7%,0.45%
+969457100,WMB,Williams Co (wmb),19201,-1929,377K,-37.87K,-9.1%,0.22%
+867224107,SU,Suncor Energy (su),79941,-3161,978K,-38.67K,-3.8%,0.57%
+459200101,IBM,Intl Business Machines Corp (i,26438,-330,3.22M,-40.15K,-1.2%,1.9%
+14149Y108,CAH,Cardinal Health Inc (cah),9211,-894,432K,-41.93K,-8.8%,0.25%
+478160104,JNJ,Johnson & Johnson (jnj),3406,-316,507K,-47.04K,-8.5%,0.3%
+17133Q502,CHT,Chunghwa Telecm (cht),31983,-1315,1.16M,-47.65K,-3.9%,0.68%
+17275R102,CSCO,Cisco Systems Inc (csco),18703,-1248,737K,-49.18K,-6.3%,0.43%
+110448107,BTI,British American Tob (bti),13467,-1405,487K,-50.81K,-9.4%,0.29%
+00206R102,T,At&T Inc (t),28529,-1846,813K,-52.61K,-6.1%,0.48%
+904784709,UN,Unilever (un),8865,-887,535K,-53.53K,-9.1%,0.31%
+67066G104,NVDA,Nvidia Corp (nvda),993,-99,537K,-53.54K,-9.1%,0.32%
+00130H105,AES,AES Corp (aes),32927,-3279,596K,-59.35K,-9.1%,0.35%
+89151E109,TTE,Total S A (tot),54001,-1774,1.85M,-60.84K,-3.2%,1.1%
+715684106,TLK,Telekomunik Indonesia (tlk),69233,-3504,1.2M,-60.89K,-4.8%,0.71%
+780259206,,Royal Dutch Shell (rdsa),70825,-2675,1.78M,-67.34K,-3.6%,1%
+060505104,BAC,Bank Of America Corp (bac),41253,-2868,994K,-69.11K,-6.5%,0.58%
+126408103,CSX,Csx Corp (csx),30600,-1141,2.38M,-88.63K,-3.6%,1.4%
+464287309,IVW,Ishares S&P 500 Growth (ivw),1718,-399,397K,-92.2K,-18.8%,0.23%
+191216100,KO,Coca-Cola Co/The (ko),19292,-1922,952K,-94.84K,-9.1%,0.56%
+14316J108,CG,The Carlyle Group Inc (cg),70586,-3962,1.74M,-97.72K,-5.3%,1%
+N59465109,,Mylan Labs Inc (myl),155676,-6600,2.31M,-97.89K,-4.1%,1.4%
+958102105,WDC,Western Digital (wdc),56991,-2725,2.08M,-99.6K,-4.6%,1.2%
+110122108,BMY,Bristol-Myers Squibb Co (bmy),53994,-1730,3.25M,-104.29K,-3.1%,1.9%
+16939P106,,China Life Insurance (lfc),263685,-12352,2.98M,-139.83K,-4.5%,1.8%
+278865100,ECL,Ecolab Inc (ecl),19843,-751,3.96M,-150.06K,-3.6%,2.3%
+291011104,EMR,Emerson Electric Co (emr),5938,-2438,389K,-159.71K,-29.1%,0.23%
+25470F104,,Discovery Inc - A (disca),120362,-7342,2.62M,-159.82K,-5.7%,1.5%
+G5960L103,MDT,Medtronic Plc (mdt),42071,-1592,4.37M,-165.44K,-3.6%,2.6%
+654106103,NKE,Nike Inc -Cl B (nke),35348,-1451,4.44M,-182.18K,-3.9%,2.6%
+46625H100,JPM,Jpmorgan Chase & Co (jpm),40764,-1936,3.92M,-186.36K,-4.5%,2.3%
+75886F107,REGN,Regeneron Pharmaceuticals (reg,5228,-356,2.93M,-199.31K,-6.4%,1.7%
+375558103,GILD,Gilead Sciences Inc (gild),62816,-3194,3.97M,-201.81K,-4.8%,2.3%
+458140100,INTC,Intel Corp (intc),88526,-4040,4.58M,-209.2K,-4.4%,2.7%
+172967424,C,Citigroup Inc (c),92884,-4959,4M,-213.77K,-5.1%,2.4%
+45104G104,IBN,Icici Bank (ibn),440058,-21841,4.33M,-214.71K,-4.7%,2.5%
+G6095L109,,Aptiv (aptv),58670,-2448,5.38M,-224.44K,-4%,3.2%
+37940X102,GPN,Global Pymts (gpn),41025,-1570,7.29M,-278.79K,-3.7%,4.3%
+58933Y105,MRK,Merck & Co (mrk),85132,-3913,7.06M,-324.6K,-4.4%,4.1%
+464285105,IAU,Ishares Gold Trust (iau),64137,-23890,1.15M,-429.85K,-27.1%,0.68%
+78463V107,GLD,Spdr Gold Tr Spdr (gld),59992,-2858,10.63M,-506.22K,-4.5%,6.2%
+594918104,MSFT,Microsoft Corp (msft),69265,-3274,14.57M,-688.64K,-4.5%,8.6%
+874039100,TSM,Taiwan Semiconductor (tsm),139372,-8986,11.3M,-728.5K,-6.1%,6.6%
+037833100,AAPL,Apple Inc (aapl),173134,-30446,20.05M,-3.53M,-15%,11.8%
+Total,,,,,170.38M,-4.71M,-2.8%,100%

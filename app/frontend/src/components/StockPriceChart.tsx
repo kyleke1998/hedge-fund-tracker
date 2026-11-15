@@ -27,7 +27,7 @@ import {
 } from "@/lib/costBasisBand";
 import { GRID, NEGATIVE, NEUTRAL, POSITIVE, chartAnimationActive } from "@/lib/seriesColors";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { PanelTitle } from "@/components/ui/PanelTitle";
+import { Panel } from "@/components/ui/Panel";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 type RangeKey = "YTD" | "1Y" | "3Y" | "5Y" | "MAX";
@@ -291,15 +291,12 @@ export function StockPriceChart({
 
   if (!API_BASE && !staticData) {
     return (
-      <div className="frame">
-        <div className="frame-title">
-          <PanelTitle>Price history</PanelTitle>
-        </div>
+      <Panel title="Price history">
         <p className="px-3 py-3 text-xs text-muted-foreground">
           Live price history requires the local Python backend (yfinance). It is not available on
           the static GitHub Pages build — clone the repo and run the app locally to view this chart.
         </p>
-      </div>
+      </Panel>
     );
   }
 
@@ -505,50 +502,10 @@ export function StockPriceChart({
   ) : null;
 
   return (
-    <div className="frame">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
-        <div>
-          <span className="section-title">Price history</span>
-          {stats && (
-            <div className="flex items-baseline gap-3 mt-1 flex-wrap">
-              <span className="text-xl font-semibold tabular-nums">${stats.last.toFixed(2)}</span>
-              <span
-                className={`inline-flex items-center gap-1 text-[13px] tabular-nums ${
-                  headerPositive ? "delta-positive" : "delta-negative"
-                }`}
-              >
-                {headerPositive ? (
-                  <TrendingUp className="h-3.5 w-3.5" />
-                ) : (
-                  <TrendingDown className="h-3.5 w-3.5" />
-                )}
-                {headerPositive ? "+" : ""}
-                {stats.change.toFixed(2)} ({headerPositive ? "+" : ""}
-                {stats.pct.toFixed(2)}%)
-              </span>
-              <span className="text-xs text-muted-foreground">over {range}</span>
-            </div>
-          )}
-          {holdingsDomain && (
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-              <span
-                className="inline-block h-0.5 w-4 rounded-full"
-                style={{ background: HOLDINGS_COLOR }}
-              />
-              Total shares held by tracked funds (right axis, quarterly 13F)
-            </div>
-          )}
-          {showBasis && basisExtent && (
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <span
-                className="inline-block h-2 w-4 rounded-sm"
-                style={{ background: COST_BASIS_COLOR, opacity: 0.35 }}
-              />
-              Estimated institutional cost basis (10–90% band)
-              <InfoTooltip text={COST_BASIS_HELP} />
-            </div>
-          )}
-        </div>
+    <Panel
+      title="Price history"
+      headerClassName="flex-wrap"
+      aside={
         <div className="flex items-center gap-2">
           {costBasis.length > 0 && (
             <button
@@ -590,6 +547,48 @@ export function StockPriceChart({
             }))}
           />
         </div>
+      }
+    >
+      <div className="px-3 pt-2">
+        {stats && (
+          <div className="flex items-baseline gap-3 mt-1 flex-wrap">
+            <span className="text-xl font-semibold tabular-nums">${stats.last.toFixed(2)}</span>
+            <span
+              className={`inline-flex items-center gap-1 text-[13px] tabular-nums ${
+                headerPositive ? "delta-positive" : "delta-negative"
+              }`}
+            >
+              {headerPositive ? (
+                <TrendingUp className="h-3.5 w-3.5" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5" />
+              )}
+              {headerPositive ? "+" : ""}
+              {stats.change.toFixed(2)} ({headerPositive ? "+" : ""}
+              {stats.pct.toFixed(2)}%)
+            </span>
+            <span className="text-xs text-muted-foreground">over {range}</span>
+          </div>
+        )}
+        {holdingsDomain && (
+          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+            <span
+              className="inline-block h-0.5 w-4 rounded-full"
+              style={{ background: HOLDINGS_COLOR }}
+            />
+            Total shares held by tracked funds (right axis, quarterly 13F)
+          </div>
+        )}
+        {showBasis && basisExtent && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+            <span
+              className="inline-block h-2 w-4 rounded-sm"
+              style={{ background: COST_BASIS_COLOR, opacity: 0.35 }}
+            />
+            Estimated institutional cost basis (10–90% band)
+            <InfoTooltip text={COST_BASIS_HELP} />
+          </div>
+        )}
       </div>
 
       <div className="p-3">
@@ -761,6 +760,6 @@ export function StockPriceChart({
           )}
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }

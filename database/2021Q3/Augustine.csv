@@ -1,0 +1,94 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+110122108,BMY,Bristol-Myers Squibb Co (bmy),58599,7134,3.47M,422.08K,+13.9%,1.8%
+31620R303,FNF,Fidelity National Financial (f,8422,8422,382K,382K,NEW,0.2%
+629377508,NRG,NRG Energy Inc (nrg),6556,6556,268K,268K,NEW,0.14%
+131193104,CALY,Callaway Golf Co (ely),16068,8999,444K,248.67K,+127.3%,0.24%
+478160104,JNJ,Johnson & Johnson (jnj),3919,1515,633K,244.7K,+63%,0.34%
+61945C103,MOS,The Mosaic Co (mos),6300,6300,225K,225K,NEW,0.12%
+023135106,AMZN,Amazon.Com Inc (amzn),108,33,355K,108.47K,+44%,0.19%
+46625H100,JPM,Jpmorgan Chase & Co (jpm),37915,633,6.21M,103.61K,+1.7%,3.3%
+30303M102,META,Facebook Inc-A (fb),748,168,254K,57.05K,+29%,0.14%
+172967424,C,Citigroup Inc (c),89566,621,6.29M,43.58K,+0.7%,3.3%
+67066G104,NVDA,Nvidia Corp (nvda),1521,177,315K,36.66K,+13.2%,0.17%
+437076102,HD,Home Depot Inc (hd),960,106,315K,34.78K,+12.4%,0.17%
+254687106,DIS,Walt Disney Co/The (dis),3427,137,580K,23.19K,+4.2%,0.31%
+060505104,BAC,Bank Of America Corp (bac),19028,445,808K,18.9K,+2.4%,0.43%
+30231G102,XOM,Exxon Mobil Corp (xom),7574,277,446K,16.31K,+3.8%,0.24%
+532457108,LLY,Eli Lilly & Co (lly),1321,69,305K,15.93K,+5.5%,0.16%
+084670702,BRK.B,Berkshire Hathaway (brk/b),1979,58,540K,15.83K,+3%,0.29%
+871829107,SYY,Sysco Corp (syy),4199,156,330K,12.26K,+3.9%,0.18%
+00206R102,T,At&T Inc (t),24918,376,673K,10.16K,+1.5%,0.36%
+30225T102,EXR,Extra Space Storage (exr),1535,54,258K,9.08K,+3.6%,0.14%
+464288638,IGIB,iShares 5-10Y Inv Gr Corp (igi,3640,143,219K,8.6K,+4.1%,0.12%
+17275R102,CSCO,Cisco Systems Inc (csco),16139,157,878K,8.54K,+1%,0.47%
+78464A474,SPSB,SPDR Port Short Term Corp (sps,6917,207,216K,6.46K,+3.1%,0.12%
+898402102,TRMK,Trustmark Corp (trmk),9710,168,313K,5.42K,+1.8%,0.17%
+89832Q109,TFC,Truist Financial Corp (tfc),7407,90,434K,5.27K,+1.2%,0.23%
+291011104,EMR,Emerson Electric Co (emr),4559,49,429K,4.61K,+1.1%,0.23%
+03027X100,AMT,American Tower Corp (amt),7146,14,1.9M,3.72K,+0.2%,1%
+084670108,BRK.A,Berkshire Hathaway (brka),6,0,2.47M,0,NO CHANGE,1.3%
+351858105,FNV,Franco Nevada Corp (fnv),8800,0,1.14M,0,NO CHANGE,0.61%
+369550108,GD,General Dynamics (gd),2820,0,553K,0,NO CHANGE,0.29%
+22052L104,CTVA,Corteva Inc (ctva),12054,0,507K,0,NO CHANGE,0.27%
+502431109,LHX,L3 Harris Technologies (lhx),2000,0,440K,0,NO CHANGE,0.23%
+824596100,SHG,Shinhan Finl Grp Ltd Sp Adr (s,9852,0,332K,0,NO CHANGE,0.18%
+81369Y506,XLE,Energy Select Sector SPDR (xle,5930,0,309K,0,NO CHANGE,0.16%
+922908769,VTI,Vanguard Total Stock Mkt ETF (,1393,0,309K,0,NO CHANGE,0.16%
+127097103,CTRA,Coterra Energy Inc (ctra),11000,0,239K,0,NO CHANGE,0.13%
+293792107,EPD,Enterprise Prod Ptnrs LP (epd),10150,0,220K,0,NO CHANGE,0.12%
+10552T107,BRFS,BRF SA-ADR (brfs),40330,0,202K,0,NO CHANGE,0.11%
+71654V101,PBRA,Petroleo Brasil-Sp Pref ADR (p,14989,0,150K,0,NO CHANGE,0.08%
+302491303,FMC,FMC (fmc),3550,-26,325K,-2.38K,-0.7%,0.17%
+80105N105,SNY,Sanofi-Aventis (sny),9074,-58,437K,-2.79K,-0.6%,0.23%
+191216100,KO,Coca-Cola Co/The (ko),6018,-64,316K,-3.36K,-1.1%,0.17%
+110448107,BTI,British American Tob (bti),10254,-108,362K,-3.81K,-1%,0.19%
+902973304,USB,US Bancorp (usb),6447,-65,383K,-3.86K,-1%,0.2%
+7591EP100,RF,Regions Financial Corp (rf),16710,-187,356K,-3.98K,-1.1%,0.19%
+46284V101,IRM,Iron Mountain Inc (irm),8448,-95,367K,-4.13K,-1.1%,0.2%
+828806109,SPG,Simon Property Group Inc (spg),4434,-32,576K,-4.16K,-0.7%,0.31%
+904767704,UL,Unilever Plc (ul),6640,-78,360K,-4.23K,-1.2%,0.19%
+969457100,WMB,Williams Co (wmb),14471,-167,375K,-4.33K,-1.1%,0.2%
+055622104,BP,BP Plc (bp),15965,-178,436K,-4.86K,-1.1%,0.23%
+606822104,MUFG,Mitsubishi UFJ ADR (mufg),71083,-849,422K,-5.04K,-1.2%,0.22%
+31847R102,FAF,First American Financial (faf),6874,-77,461K,-5.16K,-1.1%,0.25%
+00130H105,AES,AES Corp (aes),24594,-289,561K,-6.59K,-1.2%,0.3%
+464287309,IVW,Ishares S&P 500 Growth (ivw),3205,-128,237K,-9.47K,-3.8%,0.13%
+14149Y108,CAH,Cardinal Health Inc (cah),6871,-236,340K,-11.68K,-3.3%,0.18%
+92242Y100,,Vedanta Ltd. ADR (vedl),19672,-894,301K,-13.68K,-4.3%,0.16%
+375558103,GILD,Gilead Sciences Inc (gild),56511,-204,3.95M,-14.25K,-0.4%,2.1%
+780259206,,Royal Dutch Shell (rdsa),79704,-400,3.55M,-17.83K,-0.5%,1.9%
+400501102,OMAB,Grupo Aeroportuario Cen ADR (o,5198,-513,244K,-24.08K,-9%,0.13%
+256135203,RDY,Dr Reddys Labs (rdy),4250,-422,277K,-27.5K,-9%,0.15%
+25470F104,,Discovery Inc - A (disca),47270,-1129,1.2M,-28.66K,-2.3%,0.64%
+075887109,BDX,Becton Dickinson (bdx),6191,-135,1.52M,-33.19K,-2.1%,0.81%
+97651M109,WIT,Wipro Ltd-ADR (wit),45998,-3807,406K,-33.6K,-7.6%,0.22%
+715684106,TLK,Telekomunik Indonesia (tlk),64562,-1528,1.64M,-38.81K,-2.3%,0.87%
+89151E109,TTE,TotalEnergies SE ADR (tte),59444,-873,2.85M,-41.84K,-1.4%,1.5%
+46138E800,CQQQ,Invesco ETF TR II China Tech (,6178,-684,406K,-44.95K,-10%,0.22%
+294821608,ERIC,Ericsson (LM) Tel-Sp ADR (eric,213219,-5087,2.39M,-56.97K,-2.3%,1.3%
+126408103,CSX,Csx Corp (csx),86473,-1930,2.57M,-57.4K,-2.2%,1.4%
+459200101,IBM,Intl Business Machines Corp (i,24169,-434,3.36M,-60.3K,-1.8%,1.8%
+46090F100,PDBC,Invesco Opt Yld Divers (pdbc),130514,-3049,2.75M,-64.17K,-2.3%,1.5%
+75886F107,REGN,Regeneron Pharmaceuticals (reg,4935,-107,2.99M,-64.76K,-2.1%,1.6%
+458140100,INTC,Intel Corp (intc),76113,-1235,4.05M,-65.8K,-1.6%,2.2%
+16939P106,,China Life Insurance (lfc),243931,-8497,1.99M,-69.32K,-3.4%,1.1%
+46428Q109,SLV,Ishares Silver Trust(slv),166007,-3505,3.41M,-71.91K,-2.1%,1.8%
+14316J108,CG,The Carlyle Group Inc (cg),66032,-1538,3.12M,-72.72K,-2.3%,1.7%
+958102105,WDC,Western Digital (wdc),54007,-1351,3.05M,-76.25K,-2.4%,1.6%
+278865100,ECL,Ecolab Inc (ecl),18819,-371,3.93M,-77.4K,-1.9%,2.1%
+G5960L103,MDT,Medtronic Plc (mdt),38217,-697,4.79M,-87.38K,-1.8%,2.6%
+654106103,NKE,Nike Inc -Cl B (nke),32982,-633,4.79M,-91.93K,-1.9%,2.6%
+58933Y105,MRK,Merck & Co (mrk),77306,-1417,5.81M,-106.42K,-1.8%,3.1%
+37940X102,GPN,Global Pymts (gpn),39553,-825,6.23M,-130.01K,-2%,3.3%
+037833100,AAPL,Apple Inc (aapl),132384,-1133,18.73M,-160.32K,-0.8%,10%
+78463V107,GLD,Spdr Gold Tr Spdr (gld),47065,-1004,7.73M,-164.88K,-2.1%,4.1%
+17133Q502,CHT,Chunghwa Telecm (cht),24922,-5002,979K,-196.49K,-16.7%,0.52%
+G6095L109,,Aptiv (aptv),55406,-1365,8.25M,-203.35K,-2.4%,4.4%
+281020107,EIX,Edison Intl (eix),0,-3577,0,-207K,CLOSE,0%
+46137V241,SPHQ,Invesco S&P 500 High Q(sphq),0,-4468,0,-217K,CLOSE,0%
+45104G104,IBN,Icici Bank (ibn),407182,-13932,7.68M,-262.91K,-3.3%,4.1%
+594918104,MSFT,Microsoft Corp (msft),62488,-1028,17.62M,-289.82K,-1.6%,9.4%
+517834107,LVS,Las Vegas Sands (lvs),0,-6057,0,-319K,CLOSE,0%
+874039100,TSM,Taiwan Semiconductor (tsm),129364,-4244,14.44M,-473.83K,-3.2%,7.7%
+126650100,CVS,Cvs Health Corp (cvs),0,-6186,0,-516K,CLOSE,0%
+Total,,,,,187.66M,-2.22M,-1.1%,100%

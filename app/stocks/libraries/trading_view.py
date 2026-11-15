@@ -161,7 +161,7 @@ class TradingView(FinanceLibrary):
         """
         Gets the current (or latest closing) market price for a ticker using tvDatafeed.
         """
-        tv = kwargs.get("tv_session") or TvDatafeed()
+        tv = TvDatafeed()
 
         try:
             for exchange in TradingView.EXCHANGES:
@@ -202,7 +202,7 @@ class TradingView(FinanceLibrary):
             "max": (TvInterval.in_monthly, 240),
         }
         tv_interval, n_bars = period_to_cfg.get(period, (TvInterval.in_monthly, 60))
-        tv = kwargs.get("tv_session") or TvDatafeed()
+        tv = TvDatafeed()
 
         try:
             for exchange in TradingView.EXCHANGES:
@@ -258,7 +258,7 @@ class TradingView(FinanceLibrary):
         Gets the average daily price for a ticker on a specific date using tvdatafeed.
         The average price is calculated as (High + Low) / 2.
         """
-        tv = kwargs.get("tv_session") or TvDatafeed()
+        tv = TvDatafeed()
 
         try:
             df = None
@@ -281,14 +281,14 @@ class TradingView(FinanceLibrary):
                 return None
 
             # Filter by date
-            df.index = pd.to_datetime(df.index)
+            bar_dates = pd.DatetimeIndex(pd.to_datetime(df.index))
             target_date = pd.Timestamp(date_obj)
 
             # Pick the most recent bar at or before the requested date, so non-trading
             # dates (weekends/holidays) resolve to the last trading day. The lower
             # bound stops a delisted or halted ticker resolving to its last-ever quote.
             oldest = target_date - pd.Timedelta(days=TradingView.MAX_PRICE_STALENESS_DAYS)
-            normalized = df.index.normalize()
+            normalized = bar_dates.normalize()
             on_or_before = df[(normalized <= target_date) & (normalized >= oldest)]
 
             if not on_or_before.empty:

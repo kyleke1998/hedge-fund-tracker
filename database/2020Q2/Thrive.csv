@@ -1,0 +1,5 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+00851L103,API,Agora Inc,100000,100000,4.42M,4.42M,NEW,7.6%
+98954M200,Z,Zillow Group Inc,935624,0,53.9M,0,NO CHANGE,92.4%
+594918104,MSFT,Microsoft Corporation,0,-296885,0,-46.82M,CLOSE,0%
+Total,,,,,58.32M,-42.41M,-52.7%,100%

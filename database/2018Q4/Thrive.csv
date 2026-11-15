@@ -1,0 +1,4 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+594918104,MSFT,Microsoft Corporation,5841678,5841678,593.34M,593.34M,NEW,99%
+L8681T102,SPOT,Spotify Technology S.A.,52480,52480,5.96M,5.96M,NEW,0.99%
+Total,,,,,599.29M,599.29M,+100%,100%

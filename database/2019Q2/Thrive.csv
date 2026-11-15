@@ -1,0 +1,7 @@
+CUSIP,Ticker,Company,Shares,Delta_Shares,Value,Delta_Value,Delta,Portfolio%
+98980L101,ZM,Zoom Video Communications Inc,300000,300000,26.64M,26.64M,NEW,17.3%
+83088V102,,Slack Technologies Inc,585785,585785,21.97M,21.97M,NEW,14.2%
+M4R82T106,FVRR,Fiverr International Ltd,60572,60572,1.8M,1.8M,NEW,1.2%
+L8681T102,SPOT,Spotify Technology S.A.,0,-52480,0,-7.28M,CLOSE,0%
+594918104,MSFT,Microsoft Corporation,775920,-852012,103.94M,-114.14M,-52.3%,67.3%
+Total,,,,,154.34M,-71.02M,-35.6%,100%
